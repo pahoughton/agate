@@ -27,7 +27,7 @@ var (
 
 	scriptDir = app.Flag("script-dir","shell script dir").
 		Short('s').
-		Default("scriptss").
+		Default("scripts").
 		String()
 
 	pbookDir = app.Flag("playbook-dir","ansible playbook dir").
