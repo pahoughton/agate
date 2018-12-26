@@ -52,12 +52,12 @@ func handleAlertGroup(
 	}
 	for _, alert := range abody.Alerts {
 		alertsRecvd.Inc()
-		createTicket(&alert)
-		if _, ok := alert.Labels["script"]; ok {
-			procScript(&alert)
-		}
 		if _, ok := alert.Labels["ansible"]; ok {
 			procAnsible(&alert)
+		} else if _, ok := alert.Labels["script"]; ok {
+			procScript(&alert)
+		} else {
+			createTicket(&alert)
 		}
 	}
 }
