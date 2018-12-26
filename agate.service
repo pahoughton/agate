@@ -1,0 +1,16 @@
+# 2018-12-25 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+#
+[Unit]
+Description=prometheus alertmanager alert gateway
+Documentation=https://github.com/pahoughton/agate
+After=network-online.target
+
+[Service]
+User=agate
+ExecStart=/opt/agate/bin/agate \
+	     --listen-addr ":5001" \
+	     --script-dir /opt/agate/scripts \
+	     --playbook-dir /opt/agate/playbooks
+
+[Install]
+WantedBy=multi-user.target

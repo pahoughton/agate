@@ -18,7 +18,8 @@ func procScript(a *AmgrAlert) {
 
 	node := strings.Split(a.Labels["instance"],":")[0]
 
-	scriptfn := filepath.Join(*scriptDir,a.Labels["script"])
+	cleansfn := strings.Replace(a.Labels["script"],"/","-",-1)
+	scriptfn := filepath.Join(*scriptDir,cleansfn)
 
 	aout, err := exec.Command(
 		"echo",

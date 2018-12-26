@@ -31,7 +31,8 @@ func procAnsible(a *AmgrAlert) {
 		log.Fatal(err)
 	}
 
-	pbookfn := filepath.Join(*pbookDir,a.Labels["ansible"] + ".yml")
+	cleanpb := strings.Replace(a.Labels["ansible"],"/","-",-1)
+	pbookfn := filepath.Join(*pbookDir,cleanpb + ".yml")
 
 	aout, err := exec.Command(
 		"echo",

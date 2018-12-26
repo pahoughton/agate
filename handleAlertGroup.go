@@ -31,7 +31,8 @@ func handleAlertGroup(
 	if err := json.Indent(&dbgbuf, b, " >", "  "); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(os.Stderr,"req body\n%s\n",dbgbuf.String())
+	log.Debug("handlerAlertGroup")
+	fmt.Fprintf(os.Stderr,"DEBUG req body\n%s\n",dbgbuf.String())
 
 	var abody AmgrAlertBody
 	if err := json.Unmarshal(b, &abody); err != nil {
