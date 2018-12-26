@@ -18,22 +18,31 @@ func procScript(a *AmgrAlert) {
 
 	node := strings.Split(a.Labels["instance"],":")[0]
 
-	cleansfn := strings.Replace(a.Labels["script"],"/","-",-1)
-	scriptfn := filepath.Join(*scriptDir,cleansfn)
+	scriptfn := filepath.Join(*scriptDir,a.Labels["script"])
 
-	aout, err := exec.Command(
-		"echo",
-		scriptfn,
-		node).
-			CombinedOutput()
+	cmdargs := []string{node}
+
+	if _, ok := a.Labels["script_arg"]; ok {
+		cmdargs = append(cmdargs, a.Labels["script_arg"])
+	}
+
+	cmdout, err := exec.Command(scriptfn,cmdargs...).CombinedOutput()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr,"script out\n%s\n",aout)
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr,"script %s %v\noutput:\n%s\n",
+			scriptfn,
+			cmdargs,
+			cmdout)
+		log.Error(err)
+		a.Status = "script failed"
+		createTicket(a)
+	} else {
+		a.Status = "remediated"
+		createTicket(a)
 	}
 
 	// fixme debug
-	fmt.Fprintf(os.Stderr,"script out\n%s\n",aout)
+	fmt.Fprintf(os.Stderr,"script out\n%s\n",cmdout)
 	log.Debug("script " + a.Labels["script"] + " complete")
 
 	scriptProcd.Inc()
