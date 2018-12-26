@@ -31,23 +31,28 @@ func procAnsible(a *AmgrAlert) {
 		log.Fatal(err)
 	}
 
-	cleanpb := strings.Replace(a.Labels["ansible"],"/","-",-1)
-	pbookfn := filepath.Join(*pbookDir,cleanpb + ".yml")
+	pbookfn := filepath.Join(*pbookDir,a.Labels["ansible"] + ".yml")
 
-	aout, err := exec.Command(
-		"echo",
-		"ansible-playbook",
-		"-i",invfile.Name(),
-		pbookfn).
-			CombinedOutput()
+	cmdargs := []string{"-i", invfile.Name()}
+
+	if _, ok := a.Labels["ansible_vars"]; ok {
+		cmdargs = append(cmdargs, "-e", a.Labels["ansible_vars"])
+	}
+	cmdargs = append(cmdargs, pbookfn)
+
+	cmdout, err := exec.Command("ansible-playbook",cmdargs...).CombinedOutput()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr,"ansible out\n%s\n",aout)
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr,"ansible out\n%s\n",cmdout)
+		log.Error(err)
+		a.Status = "ansible failed"
+		createTicket(a)
+	} else {
+		a.Status = "remediated"
+		createTicket(a)
 	}
-
 	// fixme debug
-	fmt.Fprintf(os.Stderr,"ansible out\n%s\n",aout)
+	fmt.Fprintf(os.Stderr,"ansible out\n%s\n",cmdout)
 	log.Debug("ansible " + a.Labels["ansible"] + " complete")
 
 	ansibleProcd.Inc()
