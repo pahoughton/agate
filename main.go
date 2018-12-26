@@ -34,6 +34,10 @@ var (
 		Short('p').
 		Default("playbooks").
 		String()
+	ticketURL = app.Flag("ticket-url","ticket service url").
+		Short('t').
+		Default("http://localhost:5003/ticket").
+		String()
 
 	nspace = "agate"
 	alertGroupsRecvd = proma.NewCounter(
