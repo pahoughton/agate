@@ -29,7 +29,7 @@ bin/mock-service \
 
 bin/mock-logger \
   --laddr ":5002" \
-  --log-fn "log/mock-service.log" \
+  --log-fn "log/mock-logger.log" \
   > log/mock-logger.out 2>&1 &
 
 bin/mock-ticket \
