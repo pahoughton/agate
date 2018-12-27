@@ -42,6 +42,8 @@ func procAnsible(a *AmgrAlert) {
 
 	cmdout, err := exec.Command("ansible-playbook",cmdargs...).CombinedOutput()
 
+	a.RemedOut = string(cmdout)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr,"ansible out\n%s\n",cmdout)
 		log.Error(err)

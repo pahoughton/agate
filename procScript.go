@@ -28,6 +28,8 @@ func procScript(a *AmgrAlert) {
 
 	cmdout, err := exec.Command(scriptfn,cmdargs...).CombinedOutput()
 
+	a.RemedOut = string(cmdout)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr,"script %s %v\noutput:\n%s\n",
 			scriptfn,

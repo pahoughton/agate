@@ -24,13 +24,14 @@ func createTicket(a *AmgrAlert){
 
 	desc  := "\nAnnotations:\n"
 	for k, v := range a.Annotations {
-		desc = k + ": " + v + "\n"
+		desc += k + ": " + v + "\n"
 	}
 	desc  += "\nLabels:\n"
 	for k, v := range a.Labels {
-		desc = k + ": " + v + "\n"
+		desc += k + ": " + v + "\n"
 	}
 	desc += "\nfrom: " + a.GeneratorURL + "\n"
+	desc += "\nremed: " + a.RemedOut + "\n"
 
 	tckt := map[string]string{
 		"title":       title,
