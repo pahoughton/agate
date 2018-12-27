@@ -5,8 +5,6 @@
   hosts: all
   tasks:
     - name: task restart mock-logger
-      shell: >-
-        demo/bin/mock-logger
-        --laddr ":5002"
-        --log-fn "demo/log/mock-log.log"
-        > demo/log/mock-logger.out 2>&1 &
+      command: scripts/start-mock-logger.bash
+      args:
+        chdir: demo
