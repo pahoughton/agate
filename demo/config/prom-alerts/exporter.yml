@@ -1,0 +1,10 @@
+# 2018-12-26 (cc) <paul4hough@gmail.com>
+#
+---
+groups:
+  - name: exporters
+    rules:
+      - alert: exporter-down
+        expr: up == 0
+        annotations:
+          description: "{{ $labels.job }} is down"

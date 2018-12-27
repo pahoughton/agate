@@ -1,0 +1,12 @@
+# 2018-12-26 (cc) <paul4hough@gmail.com>
+#
+---
+- name: playbook restart mock-logger
+  hosts: all
+  tasks:
+    - name: task restart mock-logger
+      shell: >-
+        demo/bin/mock-logger
+        --laddr ":5002"
+        --log-fn "demo/log/mock-log.log"
+        > demo/log/mock-logger.out 2>&1 &
