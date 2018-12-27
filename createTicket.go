@@ -36,7 +36,7 @@ func createTicket(a *AmgrAlert){
 		"title":       title,
 		"work_group":  "WGTEST",
 		"start_time":  a.StartsAt.String(),
-		"status:"      a.Status,
+		"status":      a.Status,
 		"description": desc,
 	}
 
