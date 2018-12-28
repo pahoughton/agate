@@ -55,7 +55,7 @@ You wouldn't want to.
 
 ## contribute
 
-https://github.com/pahoughton/agate
+https://gitlab.com/pahoughton/agate
 
 ## licenses
 
