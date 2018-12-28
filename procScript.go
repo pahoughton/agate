@@ -5,12 +5,11 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
@@ -18,7 +17,7 @@ func procScript(a *AmgrAlert) {
 
 	node := strings.Split(a.Labels["instance"],":")[0]
 
-	scriptfn := filepath.Join(*scriptDir,a.Labels["script"])
+	scriptfn := filepath.Join(*args.ScriptDir,a.Labels["script"])
 
 	cmdargs := []string{node}
 
@@ -31,21 +30,23 @@ func procScript(a *AmgrAlert) {
 	a.RemedOut = string(cmdout)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr,"script %s %v\noutput:\n%s\n",
-			scriptfn,
-			cmdargs,
-			cmdout)
-		log.Error(err)
 		a.Status = "script failed"
+		fmt.Printf("ERROR-script: %s %s\n%s\n",
+			cmdargs,
+			err.Error(),
+			cmdout)
 		createTicket(a)
 	} else {
 		a.Status = "remediated"
 		createTicket(a)
 	}
+	prom.ScriptsRun.With(
+		promp.Labels{
+			"script": a.Labels["script"],
+			"status": a.Status,
+		})
 
-	// fixme debug
-	fmt.Fprintf(os.Stderr,"script out\n%s\n",cmdout)
-	log.Debug("script " + a.Labels["script"] + " complete")
-
-	scriptProcd.Inc()
+	if *args.Debug {
+		fmt.Printf("script out\n%s\n",cmdout)
+	}
 }

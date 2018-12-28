@@ -10,25 +10,28 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func handleUnsup(
 	w http.ResponseWriter,
 	r *http.Request ) {
 
-	unsupRecvd.Inc()
+	prom.UnsupRecvd.Inc()
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("FATAL-ioutil.ReadAll: %s",err.Error())
+		os.Exit(2)
 	}
 	defer r.Body.Close()
 
 	var buf bytes.Buffer
 	if err := json.Indent(&buf, b, " >", "  "); err != nil {
-		log.Fatal(err)
+		fmt.Println("FATAL-json.Indent: ",err.Error())
+		os.Exit(2)
+	}
+	if *args.Debug {
+		fmt.Printf("DEBUG req body\n%s\n",buf.String())
 	}
 	resp := fmt.Sprintf(`<!DOCTYPE html>
 <html>
@@ -52,8 +55,7 @@ func handleUnsup(
 		r.RequestURI,
 		r.Method,
 		buf.String())
-	log.Warning("unsupported request")
-	fmt.Fprintf(os.Stderr,"req body\n%s\n",buf.String())
+	fmt.Printf("WARN-unsupported\n%s\n",resp)
 	w.WriteHeader(404)
 	w.Write([]byte(resp))
 }

@@ -4,104 +4,138 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	log     "github.com/sirupsen/logrus"
 
-	prom  "github.com/prometheus/client_golang/prometheus"
+	promp "github.com/prometheus/client_golang/prometheus"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promh "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+type CommandArgs struct {
+	ListenAddr		*string
+	ScriptDir		*string
+	PlaybookDir		*string
+	TicketMockURL   *string
+	SMTPAddr		*string
+	EmailTo			*string
+	EmailFrom		*string
+	Debug			*bool
+}
+
+type PromMetrics struct {
+	AlertGroupsRecvd *promp.CounterVec
+	AlertsRecvd      *promp.CounterVec
+	AnsiblePlays     *promp.CounterVec
+	ScriptsRun       *promp.CounterVec
+	TicketsGend      *promp.CounterVec
+	UnsupRecvd       promp.Counter
+}
+
 var (
 	app = kingpin.New(filepath.Base(os.Args[0]),
-		"prometheus alertmanager webhook processor")
+		"prometheus alertmanager webhook processor").
+			Version("0.1.1")
 
-	listenAddr = app.Flag("listen-addr","listen address").
-		Short('l').
-		Default(":5001").
-		String()
+	args = CommandArgs{
+		ListenAddr:	app.Flag("listen-addr","listen address").
+			Default(":5001").String(),
+		PlaybookDir: app.Flag("playbook-dir","ansible playbook dir").
+			Default("playbooks").String(),
+		ScriptDir:  app.Flag("script-dir","shell script dir").
+			String(),
+		TicketMockURL:	app.Flag("ticket-mock-url","mock ticket service url").
+			String(),
+		SMTPAddr:	app.Flag("ticket-smtp","email ticket smtp server").
+			String(),
+		EmailTo:	app.Flag("ticket-email-to","ticket email address").
+			String(),
+		EmailFrom:	app.Flag("ticket-email-from","ticket email from address").
+			Default("noreply-agate@no-where.not").String(),
+		Debug:		app.Flag("debug","debug output to stdout").
+			Bool(),
+	}
 
-	scriptDir = app.Flag("script-dir","shell script dir").
-		Short('s').
-		Default("scripts").
-		String()
-
-	pbookDir = app.Flag("playbook-dir","ansible playbook dir").
-		Short('p').
-		Default("playbooks").
-		String()
-	ticketURL = app.Flag("ticket-url","ticket service url").
-		Short('t').
-		Default("http://localhost:5003/ticket").
-		String()
-
-	nspace = "agate"
-	alertGroupsRecvd = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "alert_group_received_total",
-			Help:      "number of alert groups received",
-		})
-	resolvedGroupsRecvd = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "resolved_group_received_total",
-			Help:      "number of resolved alert groups received",
-		})
-	alertsRecvd = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "alert_received_total",
-			Help:      "number of alerts received",
-		})
-	scriptProcd = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "script_processed_total",
-			Help:      "number of alerts processed with ansible",
-		})
-	ansibleProcd = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "ansible_processed_total",
-			Help:      "number of alerts processed with ansible",
-		})
-	ticketGend = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "ticket_generated_total",
-			Help:      "number of tickets generated",
-		})
-	unsupRecvd = proma.NewCounter(
-		prom.CounterOpts{
-			Namespace: nspace,
-			Name:      "unsupported_received_total",
-			Help:      "number of unsupported request received",
-		})
+	promNameSpace = "agate"
+	prom = PromMetrics{
+		AlertGroupsRecvd: proma.NewCounterVec(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "alert_group_received_total",
+				Help:      "number of alert groups received",
+			}, []string{
+				"status",
+				"receiver",
+			}),
+		AlertsRecvd: proma.NewCounterVec(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "alerts_received_total",
+				Help:      "number of alerts received",
+			}, []string{
+				"name",
+				"node",
+				"status",
+			}),
+		AnsiblePlays: proma.NewCounterVec(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "ansible_plays_total",
+				Help:      "number of ansible playbook runs",
+			}, []string{
+				"playbook",
+				"status",
+			}),
+		ScriptsRun: proma.NewCounterVec(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "script_runs_total",
+				Help:      "number of script runs",
+			}, []string{
+				"script",
+				"status",
+			}),
+		TicketsGend:  proma.NewCounterVec(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "tickets_generated_total",
+				Help:      "number of ticekts created",
+			}, []string{
+				"type",
+				"dest",
+			}),
+		UnsupRecvd: proma.NewCounter(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "unsupported_received_total",
+				Help:      "number of unsupported request received",
+			}),
+	}
 )
 
 func main() {
 
-	app.Version("0.0.3")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	log.SetLevel(log.TraceLevel)
-	log.Info(os.Args[0]," started")
+	fmt.Println(os.Args[0]," listening on ",*args.ListenAddr)
 
-	if _, err := os.Stat(*pbookDir); err != nil {
-		log.Fatal(err)
+	if _, err := os.Stat(*args.PlaybookDir); err != nil {
+		fmt.Println("FATAL: ",err.Error(), *args.PlaybookDir)
 	}
-	if _, err := os.Stat(*scriptDir); err != nil {
-		log.Fatal(err)
+	if args.ScriptDir != nil {
+		if _, err := os.Stat(*args.ScriptDir); err != nil {
+			fmt.Println("FATAL: ",err.Error(), *args.ScriptDir)
+		}
 	}
 	http.Handle("/metrics", promh.Handler())
 	http.HandleFunc("/alerts",handleAlertGroup)
 	http.HandleFunc("/",handleUnsup)
 
-
-	log.Fatal(http.ListenAndServe(*listenAddr,nil))
+	fmt.Println("ERROR: ",
+		http.ListenAndServe(*args.ListenAddr,nil).Error())
+	os.Exit(1)
 }

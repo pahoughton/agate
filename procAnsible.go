@@ -11,7 +11,7 @@ import (
 	"strings"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
@@ -21,17 +21,20 @@ func procAnsible(a *AmgrAlert) {
 	node := strings.Split(a.Labels["instance"],":")[0]
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("FATAL-ioutil.TempFile: %s",err.Error())
+		os.Exit(2)
 	}
 	defer os.Remove(invfile.Name())
 	if _, err := invfile.WriteString(node + "\n"); err != nil {
-		log.Fatal(err)
+		fmt.Println("FATAL-WriteString: %s",err.Error())
+		os.Exit(2)
 	}
 	if err := invfile.Close(); err != nil {
-		log.Fatal(err)
+		fmt.Println("FATAL-Close: %s",err.Error())
+		os.Exit(2)
 	}
 
-	pbookfn := filepath.Join(*pbookDir,a.Labels["ansible"] + ".yml")
+	pbookfn := filepath.Join(*args.PlaybookDir,a.Labels["ansible"] + ".yml")
 
 	cmdargs := []string{"-i", invfile.Name()}
 
@@ -45,17 +48,20 @@ func procAnsible(a *AmgrAlert) {
 	a.RemedOut = string(cmdout)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr,"ansible out\n%s\n",cmdout)
-		log.Error(err)
 		a.Status = "ansible failed"
+		fmt.Printf("ERROR-ansible-%s:%s\n%s\n",
+			a.Labels["ansible"],err.Error(),cmdout)
 		createTicket(a)
 	} else {
 		a.Status = "remediated"
 		createTicket(a)
 	}
-	// fixme debug
-	fmt.Fprintf(os.Stderr,"ansible out\n%s\n",cmdout)
-	log.Debug("ansible " + a.Labels["ansible"] + " complete")
-
-	ansibleProcd.Inc()
+	prom.AnsiblePlays.With(
+		promp.Labels{
+			"playbook": a.Labels["ansible"],
+			"status": a.Status,
+		})
+	if *args.Debug {
+		fmt.Printf("ansible out\n%s\n",cmdout)
+	}
 }

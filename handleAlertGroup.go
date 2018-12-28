@@ -10,48 +10,63 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
-	log "github.com/sirupsen/logrus"
+	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 func handleAlertGroup(
 	w http.ResponseWriter,
 	r *http.Request ) {
 
-	alertGroupsRecvd.Inc()
-
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("FATAL-ioutil.ReadAll: %s",err.Error())
+		os.Exit(2)
 	}
 	defer r.Body.Close()
 
-	// fixme debug only
-	var dbgbuf bytes.Buffer
-	if err := json.Indent(&dbgbuf, b, " >", "  "); err != nil {
-		log.Fatal(err)
+	if *args.Debug {
+		var dbgbuf bytes.Buffer
+		if err := json.Indent(&dbgbuf, b, " >", "  "); err != nil {
+			fmt.Println("FATAL-json.Indent: ",err.Error())
+			os.Exit(2)
+		}
+		fmt.Printf("DEBUG req body\n%s\n",dbgbuf.String())
 	}
-	log.Debug("handlerAlertGroup")
-	fmt.Fprintf(os.Stderr,"DEBUG req body\n%s\n",dbgbuf.String())
 
 	var abody AmgrAlertBody
 	if err := json.Unmarshal(b, &abody); err != nil {
-        log.Fatal(err)
+		fmt.Println("FATAL-json.Unmarshal: %s\n%v",err.Error(),b)
+		os.Exit(2)
     }
 
 	if abody.Version != "4" {
-		log.Fatal("unsupported json version: " + abody.Version)
-	}
+		fmt.Println("FATAL-version: %s",abody.Version)
+		os.Exit(2)
+    }
+	prom.AlertGroupsRecvd.With(
+		promp.Labels{
+			"status": abody.Status,
+			"receiver": abody.Receiver,
+		}).Inc()
+
 	// ignore resolved
 	if abody.Status == "resolved" {
-		resolvedGroupsRecvd.Inc()
 		return
 	}
 	if abody.Status != "firing" {
-		log.Fatal("unexpeded alert status: " + abody.Status)
+		fmt.Println("FATAL-status: %s unsupported",abody.Status)
+		os.Exit(2)
 	}
 	for _, alert := range abody.Alerts {
-		alertsRecvd.Inc()
+		node := strings.Split(alert.Labels["instance"],":")[0]
+		prom.AlertsRecvd.With(
+			promp.Labels{
+				"name": alert.Labels["alertname"],
+				"node": node,
+				"status": abody.Status,
+			}).Inc()
 		if _, ok := alert.Labels["ansible"]; ok {
 			procAnsible(&alert)
 		} else if _, ok := alert.Labels["script"]; ok {
