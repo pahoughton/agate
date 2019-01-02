@@ -4,12 +4,12 @@
 package main
 
 import (
-	//	"bytes"
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/boltdb/bolt"
 )
 
 func handleList(
@@ -17,16 +17,38 @@ func handleList(
 	r *http.Request ) {
 
 	tckTable := "<table>\n"
-	for i,tck := range tickets {
-		var tckMap map[string]string
-		if err := json.Unmarshal([]byte(tck), &tckMap); err != nil {
-			log.Error(err)
-			return
+
+	err := store.View(func(tx *bolt.Tx) error {
+
+		b := tx.Bucket([]byte(Bucket)) // fixme skv bucket name
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+
+			var t Ticket
+
+			key := string(k)
+			title := ""
+
+			err := gob.NewDecoder(bytes.NewReader(v)).Decode(t)
+			if err != nil {
+				fmt.Println("ERROR: ticket decode - ",err.Error())
+				title = err.Error()
+			} else {
+				title = t.Title
+			}
+
+			tckTable += fmt.Sprintf(
+			"<tr><td>%s</td>" +
+				"<td><a href=\"http:/show?num=%s\">%s</a></td></tr>\n",
+				key,key,title)
 		}
-		tckTable += fmt.Sprintf(
-			"<tr><td>%d</td>" +
-				"<td><a href=\"http:/show?num=%d\">%s</a></td></tr>\n",
-			i, i, tckMap["title"])
+		return nil
+	})
+	if err != nil {
+		fmt.Println("ERROR: db view '",err.Error())
+		tckTable += "<tr><td>ERROR: "+err.Error()+"</td></tr>\n"
 	}
 	tckTable += "</table>\n"
 

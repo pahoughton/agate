@@ -18,7 +18,7 @@ func handleDefault(
 	r *http.Request ) {
 
 	// inc metrics counter
-	unsupRecvd.Inc()
+	prom.UnsupRecvd.Inc()
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {

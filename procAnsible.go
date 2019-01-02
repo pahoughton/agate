@@ -9,59 +9,64 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"path/filepath"
 
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
-func procAnsible(a *AmgrAlert) {
+func procAnsible(a *AmgrAlert, tid string) error {
 
 	// create inventory file for ansible
 	node := strings.Split(a.Labels["instance"],":")[0]
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
-		fmt.Println("FATAL-ioutil.TempFile: %s",err.Error())
-		os.Exit(2)
+		return fmt.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(invfile.Name())
 	if _, err := invfile.WriteString(node + "\n"); err != nil {
-		fmt.Println("FATAL-WriteString: %s",err.Error())
-		os.Exit(2)
+		return fmt.Errorf("WriteString: %s",err.Error())
 	}
 	if err := invfile.Close(); err != nil {
-		fmt.Println("FATAL-Close: %s",err.Error())
-		os.Exit(2)
+		return fmt.Errorf("Close: %s",err.Error())
 	}
 
-	pbookfn := filepath.Join(*args.PlaybookDir,a.Labels["ansible"] + ".yml")
+	cmdargs := []string{"-i", invfile.Name(),"-e"}
 
-	cmdargs := []string{"-i", invfile.Name()}
+	avars := "agate_role=" + a.Labels["ansible"]
 
 	if _, ok := a.Labels["ansible_vars"]; ok {
-		cmdargs = append(cmdargs, "-e", a.Labels["ansible_vars"])
+		avars += " " + a.Labels["ansible_vars"]
 	}
-	cmdargs = append(cmdargs, pbookfn)
+	cmdargs = append(cmdargs,avars,*args.Playbook)
 
 	cmdout, err := exec.Command("ansible-playbook",cmdargs...).CombinedOutput()
 
-	a.RemedOut = string(cmdout)
+	var cmdstatus string
 
 	if err != nil {
-		a.Status = "ansible failed"
-		fmt.Printf("ERROR-ansible-%s:%s\n%s\n",
-			a.Labels["ansible"],err.Error(),cmdout)
-		createTicket(a)
+		cmdstatus = "error"
 	} else {
-		a.Status = "remediated"
-		createTicket(a)
+		cmdstatus = "success"
 	}
+	if len(tid) > 0 {
+		tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
+		tcom += "results: " + cmdstatus + "\n"
+		if err != nil {
+			tcom += "cmd error: " + err.Error() + "\n"
+		}
+		tcom += "output:\n" + string(cmdout)
+		if err = addTicketComment(tid,tcom); err != nil {
+			fmt.Println("ERROR: ticket comment - ",err.Error())
+		}
+	}
+	if *args.Debug {
+		fmt.Printf("DEBUG: ansible-playbook %v\noutput: %s\n",cmdargs,cmdout)
+	}
+
 	prom.AnsiblePlays.With(
 		promp.Labels{
-			"playbook": a.Labels["ansible"],
-			"status": a.Status,
+			"role": a.Labels["ansible"],
+			"status": cmdstatus,
 		})
-	if *args.Debug {
-		fmt.Printf("ansible out\n%s\n",cmdout)
-	}
+	return nil
 }

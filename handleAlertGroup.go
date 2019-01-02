@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 
 	promp "github.com/prometheus/client_golang/prometheus"
@@ -17,62 +16,64 @@ import (
 
 func handleAlertGroup(
 	w http.ResponseWriter,
-	r *http.Request ) {
+	r *http.Request ) error {
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println("FATAL-ioutil.ReadAll: %s",err.Error())
-		os.Exit(2)
+		return fmt.Errorf("ioutil.ReadAll - %s",err.Error())
 	}
 	defer r.Body.Close()
 
 	if *args.Debug {
 		var dbgbuf bytes.Buffer
 		if err := json.Indent(&dbgbuf, b, " >", "  "); err != nil {
-			fmt.Println("FATAL-json.Indent: ",err.Error())
-			os.Exit(2)
+			return fmt.Errorf("json.Indent: ",err.Error())
 		}
-		fmt.Printf("DEBUG req body\n%s\n",dbgbuf.String())
+		fmt.Println("DEBUG req body\n",dbgbuf.String())
 	}
 
 	var abody AmgrAlertBody
 	if err := json.Unmarshal(b, &abody); err != nil {
-		fmt.Println("FATAL-json.Unmarshal: %s\n%v",err.Error(),b)
-		os.Exit(2)
+		return fmt.Errorf("json.Unmarshal alert: %s\n%v",err.Error(),b)
     }
 
-	if abody.Version != "4" {
-		fmt.Println("FATAL-version: %s",abody.Version)
-		os.Exit(2)
-    }
 	prom.AlertGroupsRecvd.With(
 		promp.Labels{
 			"status": abody.Status,
 			"receiver": abody.Receiver,
 		}).Inc()
 
-	// ignore resolved
-	if abody.Status == "resolved" {
-		return
-	}
-	if abody.Status != "firing" {
-		fmt.Println("FATAL-status: %s unsupported",abody.Status)
-		os.Exit(2)
-	}
 	for _, alert := range abody.Alerts {
 		node := strings.Split(alert.Labels["instance"],":")[0]
+
 		prom.AlertsRecvd.With(
 			promp.Labels{
 				"name": alert.Labels["alertname"],
 				"node": node,
 				"status": abody.Status,
 			}).Inc()
-		if _, ok := alert.Labels["ansible"]; ok {
-			procAnsible(&alert)
-		} else if _, ok := alert.Labels["script"]; ok {
-			procScript(&alert)
+
+		if alert.Status == "firing" {
+
+			tid, err := createTicket(&alert);
+			if err != nil {
+				return fmt.Errorf("createTicket: %s",err.Error())
+			}
+			if _, ok := alert.Labels["ansible"]; ok {
+				if err := procAnsible(&alert,tid); err != nil {
+					return err
+				}
+			}
+			if _, ok := alert.Labels["script"]; ok {
+				if err := procScript(&alert,tid); err != nil {
+					return err
+				}
+			}
+		} else if alert.Status == "resolved" {
+			return procResolved(&alert)
 		} else {
-			createTicket(&alert)
+			return fmt.Errorf("status: %s\n%v\n",alert.Status,alert)
 		}
 	}
+	return nil
 }

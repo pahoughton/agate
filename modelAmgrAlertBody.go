@@ -21,8 +21,6 @@ type AmgrAlert struct {
 	Labels map[string]string `json:"labels"`
 
 	Status string `json:"status"`
-
-	RemedOut string
 }
 
 type AmgrAlertBody struct {

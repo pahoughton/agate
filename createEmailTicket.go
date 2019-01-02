@@ -7,14 +7,13 @@ package main
 import (
 	"fmt"
 	"net/smtp"
-	"os"
 	"strings"
 
     yml "gopkg.in/yaml.v2"
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
-func createEmailTicket(a *AmgrAlert){
+func createEmailTicket(a *AmgrAlert) (string, error) {
 
 	if *args.Debug {
 		fmt.Println("DEBUG: create mock api ticket for: ")
@@ -24,8 +23,7 @@ func createEmailTicket(a *AmgrAlert){
 
 	c, err := smtp.Dial(*args.SMTPAddr)
 	if err != nil {
-		fmt.Println("FATAL-smtp.Dial: ",*args.SMTPAddr," ",err)
-		os.Exit(2)
+		return "", fmt.Errorf("smtp.Dial: %s %s",*args.SMTPAddr,err)
 	}
 	defer c.Close()
 	c.Mail(*args.EmailFrom)
@@ -33,31 +31,27 @@ func createEmailTicket(a *AmgrAlert){
 
 	wc, err := c.Data()
 	if err != nil {
-		fmt.Println("FATAL-smtp.Data: ",*args.SMTPAddr," ",err)
-		os.Exit(2)
+		return "", fmt.Errorf("smtp.Data: %s %s",*args.SMTPAddr,err)
 	}
 	defer wc.Close()
 
 	node := strings.Split(a.Labels["instance"],":")[0]
 	ybody, err := yml.Marshal(*a)
 	if err != nil {
-		fmt.Printf("FATAL-yml.Marshal: %s\n%+v\n",err.Error(),*a)
-		os.Exit(2)
+		return "", fmt.Errorf("yml.Marshal: %s\n%+v\n",err.Error(),*a)
 	}
 
-	_, err = wc.Write([]byte("Subject: " +
-		node + ": " + a.Labels["alertname"]))
+	_, err = wc.Write([]byte("Subject: "+node+": "+a.Labels["alertname"]))
 	if err != nil {
-		fmt.Println("FATAL-smtp.Write: ",err.Error())
-		os.Exit(2)
+		return "", fmt.Errorf("smtp.Write: %s",err.Error())
 	}
 	if _, err = wc.Write(ybody); err != nil {
-		fmt.Println("FATAL-smtp.Write: ",err.Error())
-		os.Exit(2)
+		return "", fmt.Errorf("smtp.Write: %s",err.Error())
 	}
 
 	prom.TicketsGend.With(
 		promp.Labels{
 			"type": "email",
 			"dest": *args.EmailTo}).Inc()
+	return "", nil
 }

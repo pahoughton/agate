@@ -13,7 +13,7 @@ import (
 )
 
 
-func procScript(a *AmgrAlert) {
+func procScript(a *AmgrAlert, tid string) error {
 
 	node := strings.Split(a.Labels["instance"],":")[0]
 
@@ -27,26 +27,32 @@ func procScript(a *AmgrAlert) {
 
 	cmdout, err := exec.Command(scriptfn,cmdargs...).CombinedOutput()
 
-	a.RemedOut = string(cmdout)
+	var cmdstatus string
 
 	if err != nil {
-		a.Status = "script failed"
-		fmt.Printf("ERROR-script: %s %s\n%s\n",
-			cmdargs,
-			err.Error(),
-			cmdout)
-		createTicket(a)
+		cmdstatus = "error"
 	} else {
-		a.Status = "remediated"
-		createTicket(a)
+		cmdstatus = "success"
 	}
+	if len(tid) > 0 {
+		tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
+		tcom += "results: " + cmdstatus + "\n"
+		if err != nil {
+			tcom += "cmd error: " + err.Error() + "\n"
+		}
+		tcom += "output:\n" + string(cmdout)
+		if err = addTicketComment(tid,tcom); err != nil {
+			fmt.Println("ERROR: ticket comment - ",err.Error())
+		}
+	}
+	if *args.Debug {
+		fmt.Printf("DEBUG: ansible-playbook %v\noutput: %s\n",cmdargs,cmdout)
+	}
+
 	prom.ScriptsRun.With(
 		promp.Labels{
 			"script": a.Labels["script"],
 			"status": a.Status,
 		})
-
-	if *args.Debug {
-		fmt.Printf("script out\n%s\n",cmdout)
-	}
+	return nil
 }

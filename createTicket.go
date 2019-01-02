@@ -3,17 +3,17 @@
 */
 package main
 
-import "fmt"
+import "errors"
 
-func createTicket(a *AmgrAlert){
+func createTicket(a *AmgrAlert) (string, error) {
 
-	if args.TicketMockURL != nil {
-		createMockApiTicket(a)
+	if args.TicketURL != nil {
+		return createApiTicket(a)
 	} else if args.SMTPAddr != nil &&
 			args.EmailTo != nil &&
 			args.EmailFrom != nil {
-		createEmailTicket(a)
+		return createEmailTicket(a)
 	} else {
-		fmt.Println("FATAL: missing ticket destination")
+		return "", errors.New("no ticket destination")
 	}
 }

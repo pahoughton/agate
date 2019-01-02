@@ -4,57 +4,124 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
+	fp "path/filepath"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/boltdb/bolt"
 
-	log "github.com/sirupsen/logrus"
-
-	prom  "github.com/prometheus/client_golang/prometheus"
+	promp  "github.com/prometheus/client_golang/prometheus"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promh "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const (
+	DBfn	= "tickets.bolt"
+	Bucket	= "ticket"
+)
+
+type CommandArgs struct {
+	ListenAddr	*string
+	DataDir		*string
+	Debug		*bool
+}
+
+type PromMetrics struct {
+	Tickets		*promp.GaugeVec
+	UnsupRecvd  promp.Counter
+}
+
+
 var (
-	app = kingpin.New(filepath.Base(os.Args[0]),
-		"http dumper service")
+	store *bolt.DB
 
-	listenAddr = app.Flag("laddr","listen address").
-		Short('l').
-		Default(":5003").
-		Envar("MOCK_TICKET_LISTEN").
-		String()
+	app = kingpin.New(fp.Base(os.Args[0]),
+		"http dumper service").
+			Version("0.0.2")
 
-	tickets []string
+	args = CommandArgs {
+		ListenAddr:	app.Flag("listen-addr","listen address").
+			Default(":5001").String(),
+		DataDir:	app.Flag("data-dir","ansible playbook dir").
+			Default("data").String(),
+		Debug:		app.Flag("debug","debug output to stdout").
+			Bool(),
+	}
 
-	unsupRecvd = proma.NewCounter(
-		prom.CounterOpts{
-			Name:      "unsupported_received_total",
-			Help:      "number of unsupported requests received",
-		})
-	ticketRecvd = proma.NewCounter(
-		prom.CounterOpts{
-			Name:      "ticket_received_total",
-			Help:      "number of ticket requests received",
-		})
+	promNameSpace = "mock_ticket"
+	prom = PromMetrics{
+		Tickets: proma.NewGaugeVec(
+			promp.GaugeOpts{
+				Namespace: promNameSpace,
+				Name:		"tickets",
+				Help:		"number of tickets",
+			}, []string{
+				"node",
+				"state",
+			}),
+		UnsupRecvd: proma.NewCounter(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "unsupported_received_total",
+				Help:      "number of unsupported request received",
+			}),
+	}
 )
 
 func main() {
-	app.Version("0.0.1")
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	log.SetLevel(log.TraceLevel)
-	log.Info("Starting ",os.Args[0],"listing to",*listenAddr)
+	fmt.Println(os.Args[0]," listening on ",*args.ListenAddr)
 
-	tickets = append(tickets,`{"title":"Dummy One","desc":"not real"}`)
-	tickets = append(tickets,`{"title":"Dummy Two","desc":"not real 2"}`)
+	if _, err := os.Stat(*args.DataDir); err != nil {
+		fmt.Println("FATAL: ",err.Error(), *args.DataDir)
+		os.Exit(1)
+	}
+
+	store, err := bolt.Open(fp.Join(*args.DataDir,DBfn),0664,nil)
+	if err != nil {
+		fmt.Println("FATAL: open '",
+			fp.Join(*args.DataDir,DBfn),"' - ",
+			err.Error())
+		os.Exit(1)
+	}
+	// set the prom gauge values from db
+	err = store.View(func(tx *bolt.Tx) error {
+
+		b := tx.Bucket([]byte(Bucket)) // fixme skv bucket name
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+
+			var t Ticket
+
+			d := gob.NewDecoder(bytes.NewReader(v))
+			if err = d.Decode(t); err != nil {
+				fmt.Println("FATAL: ticket decode - ",err.Error())
+				os.Exit(1)
+			}
+
+			prom.Tickets.WithLabelValues(t.Node,t.State).Inc()
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("FATAL: db view '",err.Error())
+		os.Exit(1)
+	}
 
 	http.Handle("/metrics", promh.Handler())
+	http.HandleFunc("/ticket",handleTicket)
 	http.HandleFunc("/list",handleList)
 	http.HandleFunc("/show",handleShow)
-	http.HandleFunc("/ticket",handleTicket)
 	http.HandleFunc("/",handleDefault)
-	log.Fatal(http.ListenAndServe(*listenAddr,nil))
+
+	err = http.ListenAndServe(*args.ListenAddr,nil)
+	fmt.Println("FATAL: "+err.Error())
+	os.Exit(1)
 }

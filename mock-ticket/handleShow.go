@@ -4,10 +4,14 @@
 package main
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/boltdb/bolt"
 )
 
 func handleShow(
@@ -16,30 +20,38 @@ func handleShow(
 
 	var tdata string
 
-	tnumStr := r.URL.Query().Get("num")
-	tnum, err := strconv.ParseUint(tnumStr, 10, 32)
-	if err != nil {
-		tdata = "<p><b>Error</b> num param(" +
-			tnumStr + ") conv error: " + err.Error() + "</p>"
-	} else if tnum >= uint64(len(tickets)) {
-		tdata = fmt.Sprintf(
-			"<p><b>Error</b> num out of range %d >= %d</p>",
-			tnum, len(tickets))
-	} else {
-		fmt.Println(tickets[tnum])
-		var tckMap map[string]string
-		if err := json.Unmarshal([]byte(tickets[tnum]), &tckMap); err != nil {
-			tdata = "<p><b>Error</b> json parse: " + err.Error() + "</p>" +
-				" <p>" + tickets[tnum] + "</p>\n"
-		} else {
-			tdata = "<table>\n"
-			for k, v := range  tckMap {
-				tdata += fmt.Sprintf("<tr><td>%s:</td>" +
-					"<td><pre>%s</pre></td><tr>\n",k,v)
-			}
-			tdata += "</table>\n"
+	tid := r.URL.Query().Get("num")
+
+	var t Ticket
+
+	err := store.View(func(tx *bolt.Tx) error {
+		bckt := tx.Bucket([]byte(Bucket))
+		tgob := bckt.Get([]byte(tid))
+		if tgob == nil {
+			return errors.New("not found - "+tid)
 		}
+		return gob.NewDecoder(bytes.NewReader(tgob)).Decode(t)
+	})
+	if err != nil {
+		fmt.Println("ERROR: db GET '",err.Error())
+		tdata = "<p><b>Error</b> get(" + tid + ") "+ err.Error() + "</p>"
+	} else {
+		tdata = `
+<table>
+  <tr><td>id</td><td>`+tid+`</td></tr>
+  <tr><td>title</td><td>`+t.Title+`</td></tr>
+  <tr><td>state</td><td>`+t.State+`</td></tr>
+  <tr><td>node</td><td>`+t.Node+`</td></tr>
+  <tr><td>worker</td><td>`+t.Worker+`</td></tr>
+  <tr><td>desc</td><td><pre>`+t.Desc+`</pre></td></tr>`
+
+		for i, cmt := range t.Comments {
+			tdata += `
+  <tr><td>comment `+strconv.Itoa(i+1)+"<td><pre>"+cmt+"</pre></td></tr>"
+		}
+		tdata += "\n</table>\n"
 	}
+
 	resp := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <body>
@@ -50,7 +62,7 @@ func handleShow(
 </body>
 </html>
 `,
-		tnum,
+		tid,
 		tdata)
 
 	w.WriteHeader(200)
