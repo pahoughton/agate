@@ -94,4 +94,4 @@ https://gitlab.com/pahoughton/agate
 
 GNU General Public License v3.0
 
-See [COPYING] (../blob/master/COPYING) for full text.
+See [COPYING](../blob/master/COPYING) for full text.
