@@ -35,7 +35,7 @@ scrape_configs:
   - job_name: ticket
     static_configs:
       - targets:
-          - localhost:5003
+          - localhost:5002
 
 rule_files:
   - prom-alerts/*.yml

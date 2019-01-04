@@ -25,8 +25,8 @@ type AlertDB struct {
 }
 
 const (
-	BNameFmt = "2019-01-01"  // buckets named by alert date
-	ATimeFmt = "2019-01-01T01:01:01.000000000-00:00"
+	BNameFmt = "2006-01-02"  // buckets named by alert date
+	ATimeFmt = "2006-01-02T15:04:05.000000000-07:00"
 )
 
 func Open(dir string, mode os.FileMode, maxDays uint ) (*AlertDB, error) {

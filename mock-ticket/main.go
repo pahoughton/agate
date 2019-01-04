@@ -32,12 +32,16 @@ type CommandArgs struct {
 
 type PromMetrics struct {
 	Tickets		*promp.GaugeVec
-	UnsupRecvd  promp.Counter
+	Errors		promp.Counter
+	UnsupRecvd	promp.Counter
 }
 
+type TicketDB struct {
+	db *bolt.DB
+}
 
 var (
-	store *bolt.DB
+	tdb TicketDB
 
 	app = kingpin.New(fp.Base(os.Args[0]),
 		"http dumper service").
@@ -45,7 +49,7 @@ var (
 
 	args = CommandArgs {
 		ListenAddr:	app.Flag("listen-addr","listen address").
-			Default(":5001").String(),
+			Default(":5002").String(),
 		DataDir:	app.Flag("data-dir","ansible playbook dir").
 			Default("data").String(),
 		Debug:		app.Flag("debug","debug output to stdout").
@@ -63,6 +67,12 @@ var (
 				"node",
 				"state",
 			}),
+		Errors: proma.NewCounter(
+			promp.CounterOpts{
+				Namespace: promNameSpace,
+				Name:      "errors_total",
+				Help:      "number of errors",
+			}),
 		UnsupRecvd: proma.NewCounter(
 			promp.CounterOpts{
 				Namespace: promNameSpace,
@@ -77,22 +87,28 @@ func main() {
 
 	fmt.Println(os.Args[0]," listening on ",*args.ListenAddr)
 
-	if _, err := os.Stat(*args.DataDir); err != nil {
+	_, err := os.Stat(*args.DataDir);
+	if err != nil {
 		fmt.Println("FATAL: ",err.Error(), *args.DataDir)
 		os.Exit(1)
 	}
 
-	store, err := bolt.Open(fp.Join(*args.DataDir,DBfn),0664,nil)
+	tdb.db, err = bolt.Open(fp.Join(*args.DataDir,DBfn),0664,nil)
 	if err != nil {
 		fmt.Println("FATAL: open '",
 			fp.Join(*args.DataDir,DBfn),"' - ",
 			err.Error())
 		os.Exit(1)
 	}
-	// set the prom gauge values from db
-	err = store.View(func(tx *bolt.Tx) error {
 
-		b := tx.Bucket([]byte(Bucket)) // fixme skv bucket name
+	// set the prom gauge values from db
+	err = tdb.db.Update(func(tx *bolt.Tx) error {
+
+		b, err := tx.CreateBucketIfNotExists([]byte(Bucket))
+		if err != nil {
+			fmt.Println("FATAL-CreateBucket ",Bucket,err.Error())
+			os.Exit(1)
+		}
 
 		c := b.Cursor()
 
@@ -101,7 +117,7 @@ func main() {
 			var t Ticket
 
 			d := gob.NewDecoder(bytes.NewReader(v))
-			if err = d.Decode(t); err != nil {
+			if err = d.Decode(&t); err != nil {
 				fmt.Println("FATAL: ticket decode - ",err.Error())
 				os.Exit(1)
 			}
@@ -111,12 +127,12 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		fmt.Println("FATAL: db view '",err.Error())
+		fmt.Println("FATAL: db update '",err.Error())
 		os.Exit(1)
 	}
 
 	http.Handle("/metrics", promh.Handler())
-	http.HandleFunc("/ticket",handleTicket)
+	http.Handle("/ticket",errHandler(handleTicket))
 	http.HandleFunc("/list",handleList)
 	http.HandleFunc("/show",handleShow)
 	http.HandleFunc("/",handleDefault)

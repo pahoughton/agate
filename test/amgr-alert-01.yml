@@ -1,0 +1,37 @@
+alerts:
+- annotations:
+    info: The disk sda1 is running full
+    summary: please check the instance example1
+  endsAt: '0001-01-01T00:00:00Z'
+  generatorURL: ''
+  labels:
+    alertname: DiskRunningFull
+    dev: sda1
+    instance: example1
+  startsAt: '2019-01-03T10:08:43.54642646-07:00'
+  status: firing
+- annotations:
+    info: The disk sda2 is running full
+    runbook: the following link http://test-url should be clickable
+    summary: please check the instance example1
+  endsAt: '0001-01-01T00:00:00Z'
+  generatorURL: ''
+  labels:
+    alertname: DiskRunningFull
+    dev: sda2
+    instance: example1
+  startsAt: '2019-01-03T10:08:43.54642646-07:00'
+  status: firing
+commonAnnotations:
+  summary: please check the instance example1
+commonLabels:
+  alertname: DiskRunningFull
+  instance: example1
+externalURL: http://cbed:9093
+groupKey: '{}:{alertname="DiskRunningFull", instance="example1"}'
+groupLabels:
+  alertname: DiskRunningFull
+  instance: example1
+receiver: agate
+status: firing
+version: '4'

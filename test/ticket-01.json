@@ -1,0 +1,6 @@
+{
+  "title": "test-alert",
+  "node": "node01",
+  "state": "firing",
+  "desc": "test alert description\nlabelone: test-lable"
+}

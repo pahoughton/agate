@@ -24,13 +24,13 @@ func handleShow(
 
 	var t Ticket
 
-	err := store.View(func(tx *bolt.Tx) error {
+	err := tdb.db.View(func(tx *bolt.Tx) error {
 		bckt := tx.Bucket([]byte(Bucket))
 		tgob := bckt.Get([]byte(tid))
 		if tgob == nil {
 			return errors.New("not found - "+tid)
 		}
-		return gob.NewDecoder(bytes.NewReader(tgob)).Decode(t)
+		return gob.NewDecoder(bytes.NewReader(tgob)).Decode(&t)
 	})
 	if err != nil {
 		fmt.Println("ERROR: db GET '",err.Error())
@@ -55,7 +55,7 @@ func handleShow(
 	resp := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <body>
-<h2> Ticket %d details </h2>
+<h2> Ticket %s details </h2>
 
 %s
 

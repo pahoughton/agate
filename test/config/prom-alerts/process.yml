@@ -4,22 +4,12 @@
 groups:
   - name: procs
     rules:
-      - alert: mock-logger-down
-        expr: >-
-          namedprocess_namegroup_num_procs{
-            groupname="mock-logger"}
-          == 0
-        labels:
-          ansible: mock-logger-restart
-        annotations:
-          description: "{{ $labels.groupname }} is down"
-
       - alert: mock-service-down
         expr: >-
           namedprocess_namegroup_num_procs{
             groupname="mock-service"}
           == 0
         labels:
-          ansible: mock-service-fail
+          ansible: mock-service
         annotations:
           description: "{{ $labels.groupname }} is down"

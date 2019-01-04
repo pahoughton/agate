@@ -18,7 +18,7 @@ func handleList(
 
 	tckTable := "<table>\n"
 
-	err := store.View(func(tx *bolt.Tx) error {
+	err := tdb.db.View(func(tx *bolt.Tx) error {
 
 		b := tx.Bucket([]byte(Bucket)) // fixme skv bucket name
 
@@ -31,7 +31,7 @@ func handleList(
 			key := string(k)
 			title := ""
 
-			err := gob.NewDecoder(bytes.NewReader(v)).Decode(t)
+			err := gob.NewDecoder(bytes.NewReader(v)).Decode(&t)
 			if err != nil {
 				fmt.Println("ERROR: ticket decode - ",err.Error())
 				title = err.Error()

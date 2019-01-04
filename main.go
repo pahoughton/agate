@@ -12,7 +12,7 @@ import (
 
 	"gitlab.com/pahoughton/agate/db"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	promp "github.com/prometheus/client_golang/prometheus"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
@@ -57,7 +57,7 @@ var (
 		DataAge:	app.Flag("data-max-days","max days to keep alerts").
 			Default("15").Uint(),
 		Playbook:	app.Flag("playbook-dir","ansible playbook dir").
-			Default("playbooks").String(),
+			Default("playbook/agate.yml").String(),
 		ScriptDir:  app.Flag("script-dir","shell script dir").
 			String(),
 		TicketURL:	app.Flag("ticket-url","ticket service url").
@@ -165,7 +165,7 @@ func main() {
 		}
 	}
 
-	if args.ScriptDir != nil {
+	if args.ScriptDir != nil && len(*args.ScriptDir) > 0 {
 		sdStat, err := os.Stat(*args.ScriptDir);
 		if err != nil {
 			fmt.Println("FATAL: ",*args.ScriptDir," - ",err.Error())

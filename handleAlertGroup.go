@@ -26,7 +26,7 @@ func handleAlertGroup(
 
 	if *args.Debug {
 		var dbgbuf bytes.Buffer
-		if err := json.Indent(&dbgbuf, b, " >", "  "); err != nil {
+		if err := json.Indent(&dbgbuf, b, " ", "  "); err != nil {
 			return fmt.Errorf("json.Indent: ",err.Error())
 		}
 		fmt.Println("DEBUG req body\n",dbgbuf.String())

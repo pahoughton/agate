@@ -3,7 +3,6 @@
 ---
 process_names:
   - comm:
-      - mock-logger
       - mock-service
       - agate
       - prometheus

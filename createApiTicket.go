@@ -39,11 +39,11 @@ func createApiTicket(a *AmgrAlert) (string, error) {
 	desc += "\nfrom: " + a.GeneratorURL + "\n"
 
 	tckt := map[string]string{
-		"title":		title,
-		"node":			node,
-		"worker":		"WGTEST",
-		"status":      a.Status,
-		"description": desc,
+		"title":	title,
+		"node":		node,
+		"worker":	"WGTEST",
+		"state":	a.Status,
+		"desc":		desc,
 	}
 
 	tcktJson, err := json.Marshal(tckt)
@@ -78,7 +78,7 @@ func createApiTicket(a *AmgrAlert) (string, error) {
 		return "", fmt.Errorf("resp-status: %s\n%v",resp.Status,rcont)
 	}
 
-	tid, ok := rmap["ticket"];
+	tid, ok := rmap["id"];
 	if ok {
 		err = adb.AddTicket(a.StartsAt,node,a.Labels["alertname"],tid)
 		if err != nil {
