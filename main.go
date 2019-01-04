@@ -82,7 +82,6 @@ var (
 				Help:      "number of alert groups received",
 			}, []string{
 				"status",
-				"receiver",
 			}),
 		AlertsRecvd: proma.NewCounterVec(
 			promp.CounterOpts{

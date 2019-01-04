@@ -40,7 +40,6 @@ func handleAlertGroup(
 	prom.AlertGroupsRecvd.With(
 		promp.Labels{
 			"status": abody.Status,
-			"receiver": abody.Receiver,
 		}).Inc()
 
 	for _, alert := range abody.Alerts {
