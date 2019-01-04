@@ -2,15 +2,17 @@
 #
 [Unit]
 Description=prometheus alertmanager alert gateway
-Documentation=https://github.com/pahoughton/agate
+Documentation=https://gitlab.com/pahoughton/agate
 After=network-online.target
 
 [Service]
 User=agate
 ExecStart=/opt/agate/bin/agate \
 	     --listen-addr ":5001" \
-	     --script-dir /opt/agate/scripts \
-	     --playbook-dir /opt/agate/playbooks
+	     --data-dir /var/lib/agate/data \
+	     --script-dir /var/lib/agate/scripts \
+	     --playbook /var/lib/agate/playbook/agate.yml \
+	     --ticket-url http://localhost:5002/ticket
 
 [Install]
 WantedBy=multi-user.target

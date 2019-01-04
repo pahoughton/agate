@@ -1,0 +1,10 @@
+# 2018-12-26 (cc) <paul4hough@gmail.com>
+#
+---
+- name: playbook restart mock-logger
+  hosts: all
+  tasks:
+    - name: task restart mock-logger
+      command: scripts/start-mock-logger.bash
+      args:
+        chdir: demo

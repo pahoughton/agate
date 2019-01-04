@@ -9,46 +9,64 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
-func procAnsible(a *AmgrAlert) {
+func procAnsible(a *AmgrAlert, tid string) error {
 
 	// create inventory file for ansible
 	node := strings.Split(a.Labels["instance"],":")[0]
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(invfile.Name())
 	if _, err := invfile.WriteString(node + "\n"); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("WriteString: %s",err.Error())
 	}
 	if err := invfile.Close(); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Close: %s",err.Error())
 	}
 
-	cleanpb := strings.Replace(a.Labels["ansible"],"/","-",-1)
-	pbookfn := filepath.Join(*pbookDir,cleanpb + ".yml")
+	cmdargs := []string{"-i", invfile.Name(),"-e"}
 
-	aout, err := exec.Command(
-		"echo",
-		"ansible-playbook",
-		"-i",invfile.Name(),
-		pbookfn).
-			CombinedOutput()
+	avars := "agate_role=" + a.Labels["ansible"]
+
+	if _, ok := a.Labels["ansible_vars"]; ok {
+		avars += " " + a.Labels["ansible_vars"]
+	}
+	cmdargs = append(cmdargs,avars,*args.Playbook)
+
+	cmdout, err := exec.Command("ansible-playbook",cmdargs...).CombinedOutput()
+
+	var cmdstatus string
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr,"ansible out\n%s\n",aout)
-		log.Fatal(err)
+		cmdstatus = "error"
+	} else {
+		cmdstatus = "success"
+	}
+	if len(tid) > 0 {
+		tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
+		tcom += "results: " + cmdstatus + "\n"
+		if err != nil {
+			tcom += "cmd error: " + err.Error() + "\n"
+		}
+		tcom += "output:\n" + string(cmdout)
+		if err = addTicketComment(tid,tcom); err != nil {
+			fmt.Println("ERROR: ticket comment - ",err.Error())
+		}
+	}
+	if *args.Debug {
+		fmt.Printf("DEBUG: ansible-playbook %v\noutput: %s\n",cmdargs,cmdout)
 	}
 
-	// fixme debug
-	fmt.Fprintf(os.Stderr,"ansible out\n%s\n",aout)
-	log.Debug("ansible " + a.Labels["ansible"] + " complete")
-
-	ansibleProcd.Inc()
+	prom.AnsiblePlays.With(
+		promp.Labels{
+			"role": a.Labels["ansible"],
+			"status": cmdstatus,
+		})
+	return nil
 }

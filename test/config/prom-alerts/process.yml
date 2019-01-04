@@ -1,0 +1,15 @@
+# 2018-12-26 (cc) <paul4hough@gmail.com>
+#
+---
+groups:
+  - name: procs
+    rules:
+      - alert: mock-service-down
+        expr: >-
+          namedprocess_namegroup_num_procs{
+            groupname="mock-service"}
+          == 0
+        labels:
+          ansible: mock-service
+        annotations:
+          description: "{{ $labels.groupname }} is down"

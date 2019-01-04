@@ -1,0 +1,11 @@
+# 2018-12-26 (cc) <paul4hough@gmail.com>
+#
+---
+process_names:
+  - comm:
+      - mock-service
+      - agate
+      - prometheus
+      - alertmanager
+      - mock-ticket
+      - node_exporter

@@ -1,19 +1,19 @@
-/* 2018-12-25 (cc) <paul4hough@gmail.com>
-   create ticket from alert
+/* 2018-12-27 (cc) <paul4hough@gmail.com>
+   FIXME what is this for?
 */
 package main
 
-import (
-	"fmt"
-	"os"
+import "errors"
 
-	log "github.com/sirupsen/logrus"
-)
+func createTicket(a *AmgrAlert) (string, error) {
 
-func createTicket(a *AmgrAlert){
-
-	log.Debug("generating ticket for alert: ")
-	fmt.Fprintf(os.Stderr,"%+v\n",*a)
-
-	ticketGend.Inc()
+	if args.TicketURL != nil {
+		return createApiTicket(a)
+	} else if args.SMTPAddr != nil &&
+			args.EmailTo != nil &&
+			args.EmailFrom != nil {
+		return createEmailTicket(a)
+	} else {
+		return "", errors.New("no ticket destination")
+	}
 }

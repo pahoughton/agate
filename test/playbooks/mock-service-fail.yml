@@ -1,0 +1,11 @@
+# 2018-12-26 (cc) <paul4hough@gmail.com>
+#
+---
+- name: playbook restart mock-service
+  hosts: all
+  tasks:
+    - name: task restart mock-service
+      become: true
+      service:
+        name: mock-serv
+        state: started

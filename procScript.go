@@ -5,36 +5,54 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
-func procScript(a *AmgrAlert) {
+func procScript(a *AmgrAlert, tid string) error {
 
 	node := strings.Split(a.Labels["instance"],":")[0]
 
-	cleansfn := strings.Replace(a.Labels["script"],"/","-",-1)
-	scriptfn := filepath.Join(*scriptDir,cleansfn)
+	scriptfn := filepath.Join(*args.ScriptDir,a.Labels["script"])
 
-	aout, err := exec.Command(
-		"echo",
-		scriptfn,
-		node).
-			CombinedOutput()
+	cmdargs := []string{node}
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr,"script out\n%s\n",aout)
-		log.Fatal(err)
+	if _, ok := a.Labels["script_arg"]; ok {
+		cmdargs = append(cmdargs, a.Labels["script_arg"])
 	}
 
-	// fixme debug
-	fmt.Fprintf(os.Stderr,"script out\n%s\n",aout)
-	log.Debug("script " + a.Labels["script"] + " complete")
+	cmdout, err := exec.Command(scriptfn,cmdargs...).CombinedOutput()
 
-	scriptProcd.Inc()
+	var cmdstatus string
+
+	if err != nil {
+		cmdstatus = "error"
+	} else {
+		cmdstatus = "success"
+	}
+	if len(tid) > 0 {
+		tcom := fmt.Sprintf("command: %s %v",scriptfn,cmdargs)
+		tcom += "results: " + cmdstatus + "\n"
+		if err != nil {
+			tcom += "cmd error: " + err.Error() + "\n"
+		}
+		tcom += "output:\n" + string(cmdout)
+		if err = addTicketComment(tid,tcom); err != nil {
+			fmt.Println("ERROR: ticket comment - ",err.Error())
+		}
+	}
+	if *args.Debug {
+		fmt.Printf("DEBUG: ansible-playbook %v\noutput: %s\n",cmdargs,cmdout)
+	}
+
+	prom.ScriptsRun.With(
+		promp.Labels{
+			"script": a.Labels["script"],
+			"status": a.Status,
+		})
+	return nil
 }

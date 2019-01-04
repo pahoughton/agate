@@ -1,0 +1,38 @@
+# 2018-12-31 (cc) <paul4hough@gmail.com>
+#
+---
+alert-bucket:
+  date-bucket:
+    alert-ticket:
+      key:
+        - node
+        - time
+        - alert
+      data:
+        - ticket-number
+
+
+
+alert-record:
+  key:
+    - start-time
+    - node
+    - alert-name
+  value:
+    - ticket-id
+
+alert:
+  firing:
+    - ticket-create
+    - create-record
+    - diagnose
+    - ticket-update
+    - remediate
+    - ticket-update
+
+  resolved:
+    - ticket-update
+    - delete-record
+
+maintenance:
+  - clean-out-unresolved
