@@ -66,7 +66,7 @@ Comments with remediation output and resolution details are also generated.
 
 ## install
 
-An example [sytemd service](../blob/master/agate.service) is
+An example [sytemd service](../master/agate.service) is
 provided. The service User must be able to ssh to alerting instances
 with out password and have the ability to sudo for remediation.
 
@@ -94,4 +94,4 @@ https://gitlab.com/pahoughton/agate
 
 GNU General Public License v3.0
 
-See [COPYING](../blob/master/COPYING) for full text.
+See [COPYING](../master/COPYING) for full text.
