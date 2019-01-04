@@ -35,7 +35,7 @@ func procScript(a *AmgrAlert, tid string) error {
 		cmdstatus = "success"
 	}
 	if len(tid) > 0 {
-		tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
+		tcom := fmt.Sprintf("command: %s %v",scriptfn,cmdargs)
 		tcom += "results: " + cmdstatus + "\n"
 		if err != nil {
 			tcom += "cmd error: " + err.Error() + "\n"
