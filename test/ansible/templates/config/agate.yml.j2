@@ -1,0 +1,17 @@
+# 2019-01-08 (cc) <paul4hough@gmail.com>  -*- yaml -*-
+#
+---
+listen-addr: ":{{ port_agate }}"
+ticket-default-sys: mock
+ticket-default-grp: pahoughton/agate
+debug: true
+base-dir: /var/lib/agate
+max-days: 15
+email-smtp: localhost:25
+email-from: no-reply-agate@nowhere.non
+gitlab-url: https://gitlab.com/api/v4
+gitlab-token: {{ gitlab_token }}
+hpsm-url: https://hpsm/apiv3
+hpsm-user: hpsm
+hpsm-pass: {{ hpsm_pass }}
+mock-ticket-url: http://localhost:{{ port_mock_ticket }}/ticket

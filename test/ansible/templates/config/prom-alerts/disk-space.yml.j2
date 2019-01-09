@@ -1,0 +1,19 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+groups:
+  - name: disk
+    rules:
+      - alert: disk-space
+        expr: >-
+          (node_filesystem_free_bytes * 100
+          / node_filesystem_size_bytes)
+          < 30
+        labels:
+          {% raw -%}
+          script: disk-usage.bash
+        {% endraw -%}
+        annotations:
+          {% raw -%}
+          description: "{{ $labels.mountpoint }} is over 70% full"
+          {%- endraw %}

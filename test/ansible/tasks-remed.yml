@@ -1,0 +1,83 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com>
+#
+---
+- name: create {{ remed_dir }}/.ssh dir
+  become: true
+  become_user: "{{ remed_user }}"
+  file:
+    name: "{{ remed_dir }}/.ssh"
+    state: directory
+    mode: 0700
+
+- name: no hostkey checking for {{ remed_user }}
+  become: true
+  become_user: "{{ remed_user }}"
+  copy:
+    dest: "{{ remed_dir }}/.ssh/config"
+    content: StrictHostKeyChecking no
+    mode: 0600
+
+- name: create {{ remed_dir }} directories
+  become: true
+  become_user: "{{ remed_user }}"
+  file:
+    name: "{{ item }}"
+    state: directory
+    mode: 0775
+  with_items:
+    - "{{ remed_dir }}/bin"
+    - "{{ remed_dir }}/config"
+    - "{{ remed_dir }}/playbook"
+    - "{{ remed_dir }}/playbook/roles"
+    - "{{ remed_dir }}/scripts"
+
+- name: install ansible
+  become: true
+  package:
+    name: ansible
+    state: present
+
+- name: upload agate binary
+  become: true
+  become_user: "{{ remed_user }}"
+  copy:
+    src: bin/agate
+    dest: "{{ remed_dir }}/bin/agate"
+    mode: 0775
+
+- name: upload scripts
+  become: true
+  become_user: "{{ remed_user }}"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ remed_dir }}/scripts"
+    mode: 0775
+  with_fileglob:
+    - scripts/*.bash
+
+- name: upload roles
+  become: true
+  become_user: "{{ remed_user }}"
+  copy:
+    src: playbook/roles/
+    dest: "{{ remed_dir }}/playbook/roles"
+
+- name: install agate service file
+  become: true
+  template:
+    src: systemd/agate.service.j2
+    dest: /etc/systemd/system/agate.service
+
+- name: install agate config file
+  become: true
+  template:
+    src: config/agate.yml.j2
+    dest: "{{ remed_dir }}/config/agate.yml"
+
+- name: enable and start agate service
+  become: true
+  systemd:
+    name: agate
+    state: started
+    enabled: true
+    daemon_reload: true

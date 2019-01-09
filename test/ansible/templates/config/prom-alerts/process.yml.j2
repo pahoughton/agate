@@ -1,0 +1,17 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+groups:
+  - name: procs
+    rules:
+      - alert: maul-down
+        expr: >-
+          namedprocess_namegroup_num_procs{
+            groupname="maul"}
+          == 0
+        labels:
+          ansible: maul-restart
+        annotations:
+          {% raw %}
+          description: "{{ $labels.groupname }} is down"
+          {% endraw %}

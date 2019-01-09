@@ -1,0 +1,5 @@
+#!/bin/bash
+# 2018-12-25 (cc) <paul4hough@gmail.com>
+#
+set -x
+echo "remed-test-script $*" > /tmp/remed-test-file

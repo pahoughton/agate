@@ -1,0 +1,66 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com>
+#
+---
+- name: upload prometheus binaries
+  become: true
+  become_user: "{{ mon_user }}"
+  copy:
+    src: bin/{{ item }}
+    dest: "{{ mon_dir }}/bin/{{ item }}"
+    mode: 0775
+  loop: "{{ prom_apps }}"
+
+- name: upload promtool
+  become: true
+  become_user: "{{ mon_user }}"
+  copy:
+    src: bin/promtool
+    dest: "{{ mon_dir }}/bin/promtool"
+    mode: 0775
+
+- name: install monitor services files
+  become: true
+  template:
+    src: systemd/{{ item }}.service.j2
+    dest: /etc/systemd/system/{{ item }}.service
+  loop: "{{ prom_apps }}"
+
+- name: create prom rules directories
+  become: true
+  become_user: "{{ mon_user }}"
+  file:
+    name: "{{ item }}"
+    state: directory
+    mode: 0775
+  with_items:
+    - "{{ mon_dir }}/config/prom-alerts"
+    - "{{ mon_dir }}/config/prom-rules"
+    - "{{ mon_dir }}/config/prom-targets"
+
+- name: install configs
+  become: true
+  become_user: "{{ mon_user }}"
+  template:
+    src: "config/{{ item }}.j2"
+    dest: "{{ mon_dir }}/config/{{ item }}"
+    mode: 0664
+  with_items:
+    - alertmanager.yml
+    - prometheus.yml
+    - prom-alerts/disk-space.yml
+    - prom-alerts/exporter.yml
+    - prom-alerts/postgres.yml
+    - prom-alerts/systemd.yml
+    - prom-targets/prometheus.json
+    - prom-targets/alertmanager.json
+    - prom-targets/agate.json
+    - prom-targets/nodes.json
+
+- name: enable and start monitor services
+  become: true
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+  loop: "{{ prom_apps }}"

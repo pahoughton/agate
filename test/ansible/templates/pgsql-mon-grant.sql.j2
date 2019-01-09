@@ -1,0 +1,18 @@
+/* 2018-12-23 (cc) <paul4hough@gmail.com> -*- sql -*-
+   grant postgres_exporter read access to system tables
+*/
+CREATE USER postgres_exporter PASSWORD '{{ pgexp_pg_pass }}';
+ALTER USER postgres_exporter SET SEARCH_PATH TO postgres_exporter,pg_catalog;
+
+CREATE SCHEMA postgres_exporter AUTHORIZATION postgres_exporter;
+
+CREATE VIEW postgres_exporter.pg_stat_activity
+AS
+  SELECT * from pg_catalog.pg_stat_activity;
+
+GRANT SELECT ON postgres_exporter.pg_stat_activity TO postgres_exporter;
+
+CREATE VIEW postgres_exporter.pg_stat_replication AS
+  SELECT * from pg_catalog.pg_stat_replication;
+
+GRANT SELECT ON postgres_exporter.pg_stat_replication TO postgres_exporter;

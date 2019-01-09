@@ -1,0 +1,15 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for process-exporter
+# /etc/systemd/system/process-exporter.service
+[Unit]
+Description=Prometheus process-exporter
+Documentation=https://github.com/ncabatoff/process-exporter
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+ExecStart={{ mon_dir }}/bin/process-exporter \
+	     --web.listen-address 0.0.0.0:{{ port_proc_exp }}
+
+[Install]
+WantedBy=multi-user.target

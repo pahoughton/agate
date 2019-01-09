@@ -1,0 +1,11 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com>
+#
+---
+- name: prometheus node
+  hosts: agate
+  tasks:
+    - import_tasks: tasks-base.yml
+    - import_tasks: tasks-mon-base.yml
+    - import_tasks: tasks-remed.yml
+    - import_tasks: tasks-mocks.yml
+    - import_tasks: tasks-prom.yml

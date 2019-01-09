@@ -17,23 +17,11 @@ usage: agate [<flags>]
 prometheus alertmanager webhook processor
 
 Flags:
-  --help                     Show context-sensitive help (also try --help-long
-                             and --help-man).
-  --version                  Show application version.
-  --listen-addr=":5001"      listen address
-  --data-dir="data"          data dir
-  --data-max-days=15         max days to keep alerts
-  --playbook-dir="playbook/agate.yml"
-                             ansible playbook dir
-  --script-dir=SCRIPT-DIR    shell script dir
-  --ticket-url=TICKET-URL    ticket service url
-  --ticket-smtp=TICKET-SMTP  email ticket smtp server
-  --ticket-email-to=TICKET-EMAIL-TO
-                             ticket email address
-  --ticket-email-from="noreply-agate@no-where.not"
-                             ticket email from address
-  --debug                    debug output to stdout
-
+  --help                   Show context-sensitive help (also try --help-long and
+                           --help-man).
+  --version                Show application version.
+  --config-fn="agate.yml"  config filename
+  --debug                  debug output to stdout
 ```
 
 The webhook URL, http://hostname:port/alerts, processes alert manager
@@ -41,23 +29,55 @@ alert groups.
 
 Prometheus metrics are available via http://hostname:port/metrics,
 
+### config file
+
+```yaml
+listen-addr: ":1234"
+ticket-default-sys: gitlab
+ticket-default-grp: project
+debug: true
+base-dir: /var/lib/agate
+max-days: 15
+email-smtp: host:25
+email-from: no-reply-agate@nowhere.non
+gitlab-url: https://gitlab.com/api/v4
+gitlab-token: secret-token
+hpsm-url: https://hpsm/apiv3
+hpsm-user: hpsm
+hpsm-pass: pass
+mock-ticket-url: http://localhost:5003/ticket
+```
+
 ### labels
+
+* ticket: gitlab|mock
+
+  ticketing system
+
+* gitlab: project
+
+  gitlab project for issue creation
+
+* hpsmwg: WGTEST
+
+  HPSM Workgroup for ticket creation
+
+* email: linux-queue@nowhere.none
+
+  email address to send tickets to
 
 * ansible: role
 
-  execute the specified ansible role on the instance
-
-* ansible_vars: var=value ...
-
-  pass variable values to the role
+  execute the specified ansible role on the instance alert labels
+  are added to the playbook as host vars
 
 * script: name
 
   run the specified script passing instance as the
 
-* script_arg: value
+* close_resolved: bool
 
-  pass the value as the scripts second argument
+  close ticket when resolved
 
 ## features
 

@@ -1,0 +1,19 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for prometheus
+# /etc/systemd/system/prometheus.service
+[Unit]
+Description=Prometheus Server
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+ExecStart={{ mon_dir }}/bin/prometheus \
+	     --config.file {{ mon_dir }}/config/prometheus.yml \
+	     --web.listen-address "0.0.0.0:{{ port_prom }}" \
+             --storage.tsdb.path {{ mon_dir }}/data/prom-data
+
+ExecReload=/bin/kill -SIGHUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target

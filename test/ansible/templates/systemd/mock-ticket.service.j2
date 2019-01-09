@@ -1,0 +1,17 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for mock ticket
+# /etc/systemd/system/mock-ticket.service
+[Unit]
+Description=Mock Ticket
+Documentation=https://github.com/pahoughton/agate
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+ExecStart={{ mon_dir }}/bin/mock-ticket \
+	     --listen-addr ":{{ port_mock_ticket }}" \
+	     --data-dir {{ mon_dir }}/data \
+	     --debug
+
+[Install]
+WantedBy=multi-user.target

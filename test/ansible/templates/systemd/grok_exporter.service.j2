@@ -1,0 +1,15 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for node_exporter
+# /etc/systemd/system/grok_exporter.service
+[Unit]
+Description=Prometheus grok_exporter
+Documentation=https://github.com/fstab/grok_exporter
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+ExecStart={{ mon_dir }}/bin/grok_exporter \
+	     -config {{ mon_dir }}/config/grok_exporter.yml
+
+[Install]
+WantedBy=multi-user.target

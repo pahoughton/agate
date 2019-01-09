@@ -26,7 +26,6 @@ type AlertDB struct {
 
 const (
 	BNameFmt = "2006-01-02"  // buckets named by alert date
-	ATimeFmt = "2006-01-02T15:04:05.000000000-07:00"
 )
 
 func Open(dir string, mode os.FileMode, maxDays uint ) (*AlertDB, error) {
@@ -50,10 +49,6 @@ func Open(dir string, mode os.FileMode, maxDays uint ) (*AlertDB, error) {
 		}
 	}()
 	return adb, nil
-}
-
-func alertKey(aStart time.Time, aNode string, alert string) string {
-	return aStart.Format(ATimeFmt) + " " + aNode + "." + alert
 }
 
 func (adb *AlertDB) CleanBuckets() {
@@ -92,14 +87,9 @@ func (adb *AlertDB) CleanBuckets() {
 	}
 }
 
-func (adb *AlertDB) AddTicket(
-	aStart time.Time,
-	aNode string,
-	alert string,
-	tid string) error {
+func (adb *AlertDB) AddTicket(aKey string, tid string) error {
 
-	bname := aStart.Format(BNameFmt)
-	key := alertKey(aStart,aNode,alert)
+	bname := aKey[:len(BNameFmt)]
 
 	err := adb.db.Update(func(tx *bolt.Tx) error {
 
@@ -107,18 +97,14 @@ func (adb *AlertDB) AddTicket(
 		if err != nil {
 			return err
 		}
-		return bkt.Put([]byte(key),[]byte(tid))
+		return bkt.Put([]byte(aKey),[]byte(tid))
 	})
 	return err
 }
 
-func (adb *AlertDB) GetTicket(
-	aStart time.Time,
-	aNode string,
-	alert string) (string, error) {
+func (adb *AlertDB) GetTicket(aKey string) (string, error) {
 
-	bname := aStart.Format(BNameFmt)
-	key := alertKey(aStart,aNode,alert)
+	bname := aKey[:len(BNameFmt)]
 
 	var tid string
 
@@ -127,9 +113,9 @@ func (adb *AlertDB) GetTicket(
 		if bkt == nil {
 			return errors.New("bucket not found " + bname)
 		}
-		val := bkt.Get([]byte(key))
+		val := bkt.Get([]byte(aKey))
 		if val == nil {
-			return errors.New("alert not found: " + key)
+			return errors.New("alert not found: " + aKey)
 		}
 		tid = string(val)
 		return nil
@@ -137,20 +123,16 @@ func (adb *AlertDB) GetTicket(
 	return tid, err
 }
 
-func (adb *AlertDB) DelTicket(
-	aStart time.Time,
-	aNode string,
-	alert string) error {
+func (adb *AlertDB) DelTicket(aKey string) error {
 
-	bname := aStart.Format(BNameFmt)
-	key := alertKey(aStart,aNode,alert)
+	bname := aKey[:len(BNameFmt)]
 
 	err := adb.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket([]byte(bname))
 		if bkt == nil {
 			return errors.New("bucket not found " + bname)
 		}
-		return bkt.Delete([]byte(key))
+		return bkt.Delete([]byte(aKey))
 	})
 	return err
 }

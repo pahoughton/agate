@@ -1,0 +1,20 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+global:
+  resolve_timeout: 15s
+
+route:
+
+  group_by:
+    - alertname
+    - instance
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 10m
+  receiver: 'agate'
+
+receivers:
+  - name: 'agate'
+    webhook_configs:
+      - url: 'http://{{ addr_remed }}:{{ port_agate }}/alerts'

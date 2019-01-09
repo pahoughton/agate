@@ -1,0 +1,22 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com>
+#
+---
+
+- name: install postgresql
+  become: true
+  package:
+    name: postgresql-server
+    state: present
+
+- name: init postgresql database
+  become: true
+  command: /usr/bin/postgresql-setup initdb
+  args:
+    creates: /var/lib/pgsql/data/PG_VERSION
+
+- name: start and enable postgresql
+  become: true
+  service:
+    name: postgresql
+    state: started
+    enabled: true

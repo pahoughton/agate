@@ -1,0 +1,8 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com>
+#
+---
+process_names:
+  - comm:
+{% for proc in mon_proc_list %}
+      - {{ proc }}
+{% endfor %}
