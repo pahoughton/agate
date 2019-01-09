@@ -12,6 +12,7 @@ import (
 	"gitlab.com/pahoughton/agate/db"
 	"gitlab.com/pahoughton/agate/config"
 	"gitlab.com/pahoughton/agate/ticket/gitlab"
+	"gitlab.com/pahoughton/agate/ticket/mock"
 
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
@@ -21,6 +22,7 @@ type Ticket struct {
 	DefaultGrp	string
 	Adb			*db.AlertDB
 	Gitlab		*gitlab.Gitlab
+	Mock		*mock.Mock
 	TicketsGend	*promp.CounterVec
 }
 
@@ -30,6 +32,7 @@ func New(c *config.Config) *Ticket {
 		DefaultGrp:	c.TicketDefaultGrp,
 
 		Gitlab:	gitlab.New(c.GitlabURL, c.GitlabToken, c.GitlabProject),
+		Mock:	mock.New(c.MockURL, c.Debug),
 
 		TicketsGend: proma.NewCounterVec(
 			promp.CounterOpts{
@@ -41,6 +44,8 @@ func New(c *config.Config) *Ticket {
 				"dest",
 			}),
 	}
+
+	tck.Gitlab.Debug = c.Debug
 
 	var err error
 	tck.Adb, err = db.Open(path.Join(c.BaseDir, "data"), 0664, c.MaxDays);
@@ -71,6 +76,8 @@ func (t *Ticket) Create(
 	switch tsys {
 	case "gitlab":
 		tid, err = t.Gitlab.CreateIssue(tsub,title,desc)
+	case "mock":
+		tid, err = t.Mock.Create(title,desc)
 	default:
 		err = errors.New("unsupported ticket sys: " + tsys)
 	}
@@ -89,6 +96,8 @@ func (t *Ticket)AddTidComment(tsys string, tid string, cmt string ) error {
 	switch tsys {
 	case "gitlab":
 		return t.Gitlab.AddComment(tid,cmt)
+	case "mock":
+		return t.Mock.AddComment(tid,cmt)
 	default:
 		return errors.New("unsupported ticket sys: "+tsys)
 	}
@@ -106,6 +115,8 @@ func (t *Ticket)AddKeyComment(tsys string, aKey string, cmt string ) error {
 	switch tsys {
 	case "gitlab":
 		return t.Gitlab.AddComment(tid,cmt)
+	case "mock":
+		return t.Mock.AddComment(tid,cmt)
 	default:
 		return errors.New("unsupported ticket sys: "+tsys)
 	}
@@ -123,6 +134,8 @@ func (t *Ticket)Close(tsys string, aKey string ) error {
 	switch tsys {
 	case "gitlab":
 		return t.Gitlab.Close(tid)
+	case "mock":
+		return t.Mock.Close(tid)
 	default:
 		return errors.New("unsupported ticket sys: "+tsys)
 	}

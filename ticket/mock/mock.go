@@ -1,7 +1,7 @@
 /* 2018-12-25 (cc) <paul4hough@gmail.com>
-   create ticket from alert
+   mock ticket interface
 */
-package main
+package mock
 
 import (
 	"bytes"
@@ -9,59 +9,44 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
-
-    yml "gopkg.in/yaml.v2"
-	promp "github.com/prometheus/client_golang/prometheus"
 )
 
-func createApiTicket(a *AmgrAlert) (string, error) {
+type Mock struct {
+	Debug	bool
+	Url		string
+}
 
-	if *args.Debug {
-		fmt.Println("DEBUG: create mock api ticket for: ")
-		yout, _ := yml.Marshal(*a)
-		fmt.Println(string(yout))
+func New(url string, debug bool) *Mock {
+	m := &Mock{
+		Debug:	debug,
+		Url:	url,
 	}
+	return m
+}
 
-	node := strings.Split(a.Labels["instance"],":")[0]
-	title := node + ": " + a.Labels["alertname"]
-
-	desc := "start_time: " + a.StartsAt.String() + "\n"
-
-	desc += "\nAnnotations:\n"
-	for k, v := range a.Annotations {
-		desc += k + ": " + v + "\n"
-	}
-	desc  += "\nLabels:\n"
-	for k, v := range a.Labels {
-		desc += k + ": " + v + "\n"
-	}
-	desc += "\nfrom: " + a.GeneratorURL + "\n"
+func (m *Mock)Create(title string, desc string) (string, error) {
 
 	tckt := map[string]string{
 		"title":	title,
-		"node":		node,
-		"worker":	"WGTEST",
-		"state":	a.Status,
+		"state":	"firing",
 		"desc":		desc,
 	}
 
 	tcktJson, err := json.Marshal(tckt)
 	if err != nil {
-		return "", fmt.Errorf("json.Marshal: %s\n%+v\n",err.Error(),*a)
+		return "", fmt.Errorf("json.Marshal: %s\n%+v\n",err.Error(),tckt)
 	}
 
 	resp, err := http.Post(
-		*args.TicketURL,
+		m.Url,
 		"application/json",
 		bytes.NewReader(tcktJson))
 
     if err != nil {
 		return "", fmt.Errorf("http.post-%s: %s \n%+v\n",
-			*args.TicketURL,err.Error(),tcktJson)
+			m.Url,err.Error(),tcktJson)
     }
 	defer resp.Body.Close()
-
 
 	rcont, err := ioutil.ReadAll(resp.Body);
 	if err != nil {
@@ -79,19 +64,74 @@ func createApiTicket(a *AmgrAlert) (string, error) {
 	}
 
 	tid, ok := rmap["id"];
-	if ok {
-		err = adb.AddTicket(a.StartsAt,node,a.Labels["alertname"],tid)
-		if err != nil {
-			return "", err
-		}
-	} else {
+	if ! ok {
 		return "", fmt.Errorf("no ticket id %v",rmap)
 	}
 
-	prom.TicketsGend.With(
-		promp.Labels{
-			"type": "mock-api",
-			"dest": *args.TicketURL}).Inc()
-
 	return tid, nil
+}
+
+func (m *Mock)AddComment(tid string, cmt string) error {
+
+	tmap := map[string]string{
+		"id": tid,
+		"comment": cmt,
+	}
+	tjson, err := json.Marshal(tmap)
+	if err != nil {
+		return fmt.Errorf("json.Marshal - %s",err.Error())
+	}
+
+	resp, err := http.Post(
+		m.Url,
+		"application/json",
+		bytes.NewReader(tjson))
+
+	if err != nil {
+		return fmt.Errorf("http.Post - %s",err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	rcont, err := ioutil.ReadAll(resp.Body);
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("resp: "+resp.Status+string(rcont))
+	}
+	return nil
+}
+
+func (m *Mock)Close(tid string) error {
+	tmap := map[string]string{
+		"id":		tid,
+		"state":	"closed",
+	}
+	tjson, err := json.Marshal(tmap)
+	if err != nil {
+		return fmt.Errorf("json.Marshal - %s",err.Error())
+	}
+
+	resp, err := http.Post(
+		m.Url,
+		"application/json",
+		bytes.NewReader(tjson))
+
+	if err != nil {
+		return fmt.Errorf("http.Post - %s",err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	rcont, err := ioutil.ReadAll(resp.Body);
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("resp: "+resp.Status+string(rcont))
+	}
+	return nil
 }
