@@ -13,6 +13,7 @@ import (
 )
 
 type Gitlab struct {
+	Debug		bool
 	defaultPrj	string
 	c			*gl.Client
 }
@@ -39,12 +40,15 @@ func (g *Gitlab)CreateIssue(
 	}
 	i, resp, err := g.c.Issues.CreateIssue(prj,&gl.CreateIssueOptions{
 		Title: gl.String(title),
-		Description: gl.String(desc),
+		Description: gl.String("```\n"+desc+"\n```\n"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("gl.CreateIssue: %s\nresp:\n%v",err,resp)
 	}
-	return fmt.Sprintf("%s:%d",prj,i.ID), nil
+	if g.Debug {
+		fmt.Printf("gitlab.CreateIssue: ret issue: %v\n",i)
+	}
+	return fmt.Sprintf("%s:%d",prj,i.IID), nil
 }
 
 func (g *Gitlab)AddComment(tid string, cmt string) error {
@@ -55,12 +59,20 @@ func (g *Gitlab)AddComment(tid string, cmt string) error {
 	if err != nil {
 		return fmt.Errorf("atoi: %s - %s",tida[1],err)
 	}
-
+	if g.Debug {
+		fmt.Printf("gitlab.AddComment: tid '%s' tida '%v' tida0 '%s' tida1 '%s' prj '%s' issue '%d'\n",
+			tid,
+			tida,
+			tida[0],
+			tida[1],
+			prj,
+			issue)
+	}
 	_, resp, err := g.c.Notes.CreateIssueNote(
 		prj,
 		issue,
 		&gl.CreateIssueNoteOptions{
-			Body: gl.String(cmt),
+			Body: gl.String("```\n"+cmt+"\n```\n"),
 		})
 
 	if err != nil {
