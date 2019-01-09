@@ -1,0 +1,39 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  - job_name: prometheus
+    file_sd_configs:
+      - files:
+        - {{ mon_dir }}/config/prom-targets/prometheus.json
+
+  - job_name: alertmgr
+    file_sd_configs:
+      - files:
+          - {{ mon_dir }}/config/prom-targets/alertmanager.json
+
+  - job_name: agate
+    file_sd_configs:
+      - files:
+          - {{ mon_dir }}/config/prom-targets/agate.json
+
+  - job_name: node
+    file_sd_configs:
+      - files:
+          - {{ mon_dir }}/config/prom-targets/nodes.json
+
+rule_files:
+  - {{ mon_dir }}/config/prom-alerts/*.yml
+
+alerting:
+  alertmanagers:
+    - scheme: http
+      static_configs:
+        - targets:
+            - 'localhost:{{ port_amgr }}'

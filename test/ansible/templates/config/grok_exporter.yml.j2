@@ -1,0 +1,30 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+global:
+  config_version: 2
+
+server:
+  port: {{ port_grok_exp }}
+
+input:
+  type: file
+  path: FIXME.log
+  readall: true
+  fail_on_missing_logfile: false
+
+grok:
+  additional_patterns:
+    - 'MSG msg="?([^"]+)"?'
+
+metrics:
+
+  - type: gauge
+    name: mock_logger_error_total
+    help: number of error messages
+    match: level=error
+
+  - type: gauge
+    name: mock_logger_warn_total
+    help: number of warning messages
+    match: level=warning

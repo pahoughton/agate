@@ -1,0 +1,27 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+groups:
+  - name: systemd
+    rules:
+      {% for item in systemd_alerts %}
+
+      - alert: {{ item }}-down
+        expr: >-
+          node_systemd_unit_state{
+            name="{{ item }}.service",
+            state="active"}
+          == 0
+        labels:
+          ticket: gitlab
+          {% raw -%}
+          svc_name: "{{ $labels.name }}"
+          {% endraw -%}
+          ansible: restart-service
+          close_resolved: true
+        annotations:
+          {%- raw %}
+          description: "{{ $labels.name }} is down"
+          {%- endraw -%}
+
+      {% endfor %}

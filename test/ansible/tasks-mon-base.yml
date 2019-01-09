@@ -1,0 +1,93 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com>
+#
+---
+- name: create {{ mon_user }} user
+  become: true
+  user:
+    name: "{{ mon_user }}"
+    home: "{{ mon_dir }}"
+    system: true
+
+- name: create {{ remed_user }} user
+  become: true
+  user:
+    name: "{{ remed_user }}"
+    home: "{{ remed_dir }}"
+
+- name: add {{ remed_user }} test public key
+  become: true
+  authorized_key:
+    state: present
+    user: "{{ remed_user }}"
+    key: "{{ item }}"
+  with_file:
+    - ssh-keys/test-id_rsa.pub
+
+- name: upload {{ remed_user }} test private key
+  become: true
+  become_user: "{{ remed_user }}"
+  copy:
+    src: ssh-keys/test-id_rsa
+    dest: "{{ remed_dir }}/.ssh/id_rsa"
+    mode: 0600
+
+- name: grant {{ remed_user }} sudo nopass access
+  become: true
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%{{ remed_user }}'
+    line: '%{{ remed_user }} ALL=(ALL) NOPASSWD: ALL'
+    validate: 'visudo -cf %s'
+
+- name: add {{ remed_user }} group to {{ ansible_user_id }} user
+  become: true
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: "{{ remed_user }}"
+    append: true
+
+- name: add {{ mon_user }} group to {{ ansible_user_id }} user
+  become: true
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: "{{ mon_user }}"
+    append: true
+
+- name: create {{ mon_dir }} directories
+  become: true
+  become_user: "{{ mon_user }}"
+  file:
+    name: "{{ item }}"
+    state: directory
+    mode: 0775
+  with_items:
+    - "{{ mon_dir }}"
+    - "{{ mon_dir }}/bin"
+    - "{{ mon_dir }}/config"
+    - "{{ mon_dir }}/data"
+
+- name: upload monitor base binaries
+  become: true
+  become_user: "{{ mon_user }}"
+  copy:
+    src: bin/{{ item }}
+    dest: "{{ mon_dir }}/bin/{{ item }}"
+    mode: 0775
+  loop: "{{ mon_base_apps }}"
+
+- name: install monitor services files
+  become: true
+  template:
+    src: systemd/{{ item }}.service.j2
+    dest: /etc/systemd/system/{{ item }}.service
+  loop: "{{ mon_base_apps }}"
+
+- name: enable and start monitor services
+  become: true
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+  loop: "{{ mon_base_apps }}"

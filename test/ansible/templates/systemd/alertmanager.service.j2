@@ -1,0 +1,17 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for alertmanager
+# /etc/systemd/system/alertmanager.service
+[Unit]
+Description=Prometheus Alertmanager Server
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+ExecStart={{ mon_dir }}/bin/alertmanager \
+	     --config.file {{ mon_dir }}/config/alertmanager.yml \
+	     --web.listen-address "0.0.0.0:{{ port_amgr }}" \
+             --storage.path {{ mon_dir }}/data/amgr-data
+
+[Install]
+WantedBy=multi-user.target

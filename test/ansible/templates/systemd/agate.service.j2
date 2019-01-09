@@ -1,0 +1,15 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+#
+[Unit]
+Description=prometheus alertmanager alert gateway
+Documentation=https://github.com/pahoughton/agate
+After=network-online.target
+
+[Service]
+User={{ remed_user }}
+ExecStart={{ remed_dir }}/bin/agate \
+	     --config-fn={{ remed_dir }}/config/agate.yml \
+	     --debug
+
+[Install]
+WantedBy=multi-user.target

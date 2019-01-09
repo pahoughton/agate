@@ -1,0 +1,16 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for maul
+# /etc/systemd/system/mock-logger.service
+[Unit]
+Description=Mock Logger
+Documentation=https://github.com/pahoughton/maul
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+ExecStart={{ mon_dir }}/bin/mock-logger \
+	     --laddr "0.0.0.0:{{ port_logger }}" \
+	     --log-fn "{{ mon_dir }}/log/mock-logger.log"
+
+[Install]
+WantedBy=multi-user.target

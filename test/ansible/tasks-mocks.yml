@@ -1,0 +1,77 @@
+# 2018-12-24 (cc) <paul4hough@gmail.com>
+#
+---
+
+- name: upload mock binaries
+  become: true
+  become_user: "{{ mon_user }}"
+  copy:
+    src: bin/{{ item }}
+    dest: "{{ mon_dir }}/bin/{{ item }}"
+    mode: 0775
+  loop: "{{ mock_services }}"
+
+- name: create {{ mon_dir }}/log directory
+  become: true
+  become_user: "{{ mon_user }}"
+  file:
+    name: "{{ item }}"
+    state: directory
+    mode: 0775
+  with_items:
+    - "{{ mon_dir }}/log"
+
+- name: install mock service files
+  become: true
+  template:
+    src: systemd/{{ item }}.service.j2
+    dest: /etc/systemd/system/{{ item }}.service
+  loop: "{{ mock_services }}"
+
+- name: enable and start mock services
+  become: true
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+  loop: "{{ mock_services }}"
+
+- name: create mock filesystem file
+  become: true
+  command: /usr/bin/dd if=/dev/zero of=/opt/mock-fs-image count=40960
+  args:
+    creates: /opt/mock-fs-image
+
+- name: make filesysetem on mock fs
+  become: true
+  filesystem:
+    fstype: xfs
+    dev: /opt/mock-fs-image
+
+- name: make mount point dir for mock fs
+  become: true
+  file:
+    name: /opt/mock-mnt
+    state: directory
+    mode: 0775
+    owner: "{{ mon_user }}"
+    group: "{{ mon_user }}"
+
+- name: mount mock file system file
+  become: true
+  mount:
+    path: /opt/mock-mnt
+    src: /opt/mock-fs-image
+    opts: loop
+    fstype: xfs
+    state: mounted
+
+- name: create files dir on mock fs
+  become: true
+  file:
+    name: /opt/mock-mnt/files
+    state: directory
+    mode: 0775
+    owner: "{{ mon_user }}"
+    group: "{{ mon_user }}"

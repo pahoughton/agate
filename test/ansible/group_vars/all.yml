@@ -1,0 +1,39 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com>
+#
+---
+mon_user: monitor
+mon_dir: /opt/monitor
+mon_base_apps:
+  - node_exporter
+
+prom_apps:
+  - prometheus
+  - alertmanager
+
+remed_user: agate
+remed_dir: /var/lib/agate
+
+port_prom: 9090
+port_amgr: 9093
+port_agate: 5001
+port_node_exp: 9100
+port_proc_exp: 9256
+port_grok_exp: 9144
+port_pgsql_exp: 9187
+port_mock_svc: 5101
+port_mock_ticket: 5003
+
+addr_remed: 10.0.0.7
+
+mock_services:
+  - mock-service
+  - mock-ticket
+
+pgexp_pg_pass: FIXME
+
+systemd_alerts:
+  - cupsd
+  - mock-service
+
+gitlab_token: secret
+hpsm_pass: pass

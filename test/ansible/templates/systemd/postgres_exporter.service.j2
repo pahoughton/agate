@@ -1,0 +1,15 @@
+# 2018-12-23 (cc) <paul4hough@gmail.com> -*- conf-unix -*-
+# service file for maul
+# /etc/systemd/system/postgres_exporter.service
+[Unit]
+Description=Postgresql prometheus exporter service
+Documentation=https://github.com/wrouesnel/postgres_exporter
+After=network-online.target
+
+[Service]
+User={{ mon_user }}
+Environment=DATA_SOURCE_NAME=postgresql://postgres_exporter:{{ pgexp_pg_pass }}@localhost:5432/postgres?sslmode=disable
+ExecStart={{ mon_dir }}/bin/postgres_exporter
+
+[Install]
+WantedBy=multi-user.target

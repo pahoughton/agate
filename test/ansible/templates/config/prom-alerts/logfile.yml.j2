@@ -1,0 +1,21 @@
+# 2018-12-22 (cc) <paul4hough@gmail.com> -*- yaml -*-
+#
+---
+groups:
+  - name: grok-logs
+    rules:
+      - alert: mock-log-errors
+        expr: mock_logger_error > 0
+        for: 1m
+        labels:
+          emmet: fix-mock-logger
+        annotations:
+          description: "has errors"
+
+      - alert: mock-log-warn
+        expr: mock_logger_warn > 0
+        for: 1m
+        labels:
+          ansible: restart-mock-logger
+        annotations:
+          description: "has warnings"
