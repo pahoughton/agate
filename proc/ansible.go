@@ -55,6 +55,9 @@ func (p *Proc)Ansible(
 		return fmt.Errorf("Close: %s",err.Error())
 	}
 
+	if p.Debug {
+		fmt.Printf("proc.Ansible-playbook:\n%s\n",pbcont)
+	}
 	cmdargs := []string{"-i", invfile.Name(),"-e"}
 
 	arole := "agate_role=" + labels["ansible"]
