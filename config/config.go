@@ -27,6 +27,7 @@ type Config struct {
 	HpsmURL				string	`yaml:"hpsm-url,omitempty"`
 	HpsmUser			string	`yaml:"hpsm-user,omitempty"`
 	HpsmPass			string	`yaml:"hpsm-pass,omitempty"`
+	MockURL				string	`yaml:"mock-ticket-url,omitempty"`
 	// derived
 	DataDir				string
 	PlaybookDir			string
