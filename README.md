@@ -17,12 +17,11 @@ usage: agate [<flags>]
 prometheus alertmanager webhook processor
 
 Flags:
-  --help                     Show context-sensitive help (also try --help-long
-                             and --help-man).
-  --version                  Show application version.
-  --config-fn="agate.yml"    FIXME
-  --debug                    debug output to stdout
-
+  --help                   Show context-sensitive help (also try --help-long and
+                           --help-man).
+  --version                Show application version.
+  --config-fn="agate.yml"  config filename
+  --debug                  debug output to stdout
 ```
 
 The webhook URL, http://hostname:port/alerts, processes alert manager
@@ -46,11 +45,12 @@ gitlab-token: secret-token
 hpsm-url: https://hpsm/apiv3
 hpsm-user: hpsm
 hpsm-pass: pass
+mock-ticket-url: http://localhost:5003/ticket
 ```
 
 ### labels
 
-* ticket: gitlab|hpsm|email
+* ticket: gitlab|mock
 
   ticketing system
 
@@ -75,7 +75,7 @@ hpsm-pass: pass
 
   run the specified script passing instance as the
 
-* close-resolved: bool
+* close_resolved: bool
 
   close ticket when resolved
 
