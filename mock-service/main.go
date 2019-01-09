@@ -12,21 +12,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
-type CommandArgs struct {
-	ListenAddr	*string
-}
-
-var (
-
-	app = kingpin.New(filepath.Base(os.Args[0]),
-		"mock dump http service").
-			Version("0.1.1")
-
-	args = CommandArgs{
-		ListenAddr:	app.Flag("listen-addr","listen address").
-			Default(":5101").String(),
-	}
-)
 
 func handleAny(
 	w http.ResponseWriter,
@@ -41,9 +26,19 @@ func handleAny(
 	fmt.Printf("URL: %v\n",r.URL)
 	fmt.Println(string(b))
 }
+
 func main() {
+	app := kingpin.New(filepath.Base(os.Args[0]),
+		"mock dump http service").
+			Version("0.1.1")
+
+	laddr := app.Flag("listen-addr","listen address").
+		Default(":5101").String()
+
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+
 	http.HandleFunc("/",handleAny)
 
-	fmt.Println("FATAL: ",http.ListenAndServe(*args.ListenAddr,nil).Error())
+	fmt.Println("FATAL: ",http.ListenAndServe(*laddr,nil).Error())
 	os.Exit(1)
 }
