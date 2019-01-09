@@ -34,10 +34,10 @@ func main() {
 		Debug:		app.Flag("debug","debug output to stdout").
 			Default("true").Bool(),
 	}
-	fmt.Println(os.Args[0]," starting")
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
+	fmt.Println(os.Args[0]," starting")
 	fmt.Println("loading ",*args.ConfigFn)
 
 	cfg, err := config.LoadFile(*args.ConfigFn)
