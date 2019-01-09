@@ -208,7 +208,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				return fmt.Errorf("ticket comment: %s",err)
 			}
 			// fixme - close resolved label?
-			if h.CloseResolved || alert.Labels["close-resolved"] == "true" {
+			if h.CloseResolved || alert.Labels["close_resolved"] == "true" {
 				if err = h.Ticket.Close(tsys,aKey); err != nil {
 					return fmt.Errorf("ticket close: %s",err)
 				}
