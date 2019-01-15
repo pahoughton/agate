@@ -75,6 +75,14 @@ mock-ticket-url: http://localhost:5003/ticket
 
   run the specified script passing instance as the
 
+* subject: name
+
+  ticket title (secondary)
+
+* title: name
+
+  ticket title (primary)
+
 * close_resolved: bool
 
   close ticket when resolved
@@ -83,6 +91,12 @@ mock-ticket-url: http://localhost:5003/ticket
 
 Alerts generate a ticket via a ticket-url or ticket-email-to.
 Comments with remediation output and resolution details are also generated.
+
+Ticket have titles and descriptions. The description includes all
+label and annotations. The title is either the title label,
+subject label or the alertname and node concatenated.
+
+Duplicate alerts, based on startsAt, from and instance labels are ignored.
 
 ## install
 

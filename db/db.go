@@ -123,7 +123,7 @@ func (adb *AlertDB) GetTicket(aKey string) (string, error) {
 	return tid, err
 }
 
-func (adb *AlertDB) DelTicket(aKey string) error {
+func (adb *AlertDB) Delete(aKey string) error {
 
 	bname := aKey[:len(BNameFmt)]
 
