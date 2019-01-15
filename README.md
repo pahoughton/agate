@@ -106,7 +106,7 @@ node_exporter and process-exporter be available in $GOPATH/bin.
 
 ## contribute
 
-https://gitlab.com/pahoughton/agate
+https://github.com/pahoughton/agate
 
 ## licenses
 

@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/pahoughton/agate/config"
-	"gitlab.com/pahoughton/agate/amgr"
+	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/amgr"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
