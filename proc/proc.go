@@ -4,8 +4,8 @@
 package proc
 
 import (
-	"gitlab.com/pahoughton/agate/config"
-	"gitlab.com/pahoughton/agate/ticket"
+	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/ticket"
 
 	promp "github.com/prometheus/client_golang/prometheus"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"

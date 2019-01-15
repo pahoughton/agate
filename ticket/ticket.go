@@ -9,10 +9,10 @@ import (
 	"os"
 	"path"
 
-	"gitlab.com/pahoughton/agate/db"
-	"gitlab.com/pahoughton/agate/config"
-	"gitlab.com/pahoughton/agate/ticket/gitlab"
-	"gitlab.com/pahoughton/agate/ticket/mock"
+	"github.com/pahoughton/agate/db"
+	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/ticket/gitlab"
+	"github.com/pahoughton/agate/ticket/mock"
 
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"

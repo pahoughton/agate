@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/pahoughton/agate/config"
-	"gitlab.com/pahoughton/agate/ticket"
-	"gitlab.com/pahoughton/agate/proc"
+	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/ticket"
+	"github.com/pahoughton/agate/proc"
 
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
