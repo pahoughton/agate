@@ -201,7 +201,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			}
 
 			desc = "from: " + alert.GeneratorURL + "\n"
-			desc = "when: " + alert.StartsAt.String() + "\n"
+			desc += "when: " + alert.StartsAt.String() + "\n"
 
 			desc += "\nAnnotations:\n"
 			ankeys := make([]string, 0, len(alert.Annotations))
