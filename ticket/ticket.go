@@ -5,11 +5,7 @@ package ticket
 
 import (
 	"errors"
-	"fmt"
-	"os"
-	"path"
 
-	"github.com/pahoughton/agate/db"
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/ticket/gitlab"
 	"github.com/pahoughton/agate/ticket/mock"
@@ -20,7 +16,6 @@ import (
 type Ticket struct {
 	DefaultSys	string
 	DefaultGrp	string
-	Adb			*db.AlertDB
 	Gitlab		*gitlab.Gitlab
 	Mock		*mock.Mock
 	TicketsGend	*promp.CounterVec
@@ -30,7 +25,6 @@ func New(c *config.Config) *Ticket {
 	tck := &Ticket{
 		DefaultSys: c.TicketDefaultSys,
 		DefaultGrp:	c.TicketDefaultGrp,
-
 		Gitlab:	gitlab.New(c.GitlabURL, c.GitlabToken, c.GitlabProject),
 		Mock:	mock.New(c.MockURL, c.Debug),
 
@@ -47,20 +41,12 @@ func New(c *config.Config) *Ticket {
 
 	tck.Gitlab.Debug = c.Debug
 
-	var err error
-	tck.Adb, err = db.Open(path.Join(c.BaseDir, "data"), 0664, c.MaxDays);
-	if err != nil {
-		fmt.Println("FATAL: open db - ",err.Error())
-		os.Exit(1)
-	}
-
 	return tck
 }
 
 func (t *Ticket) Create(
 	tsys	string,
 	tsub	string,
-	aKey	string,
 	title	string,
 	desc	string ) (string, error) {
 
@@ -85,10 +71,10 @@ func (t *Ticket) Create(
 		return "", err
 	}
 
-	return tid, t.Adb.AddTicket(aKey,tid)
+	return tid, nil
 }
 
-func (t *Ticket)AddTidComment(tsys string, tid string, cmt string ) error {
+func (t *Ticket)AddComment(tsys string, tid string, cmt string ) error {
 
 	if len(tsys) < 1 {
 		tsys = t.DefaultSys
@@ -103,33 +89,10 @@ func (t *Ticket)AddTidComment(tsys string, tid string, cmt string ) error {
 	}
 }
 
-func (t *Ticket)AddKeyComment(tsys string, aKey string, cmt string ) error {
+func (t *Ticket)Close(tsys string, tid string ) error {
 
 	if len(tsys) < 1 {
 		tsys = t.DefaultSys
-	}
-	tid, err := t.Adb.GetTicket(aKey)
-	if err != nil {
-		return err
-	}
-	switch tsys {
-	case "gitlab":
-		return t.Gitlab.AddComment(tid,cmt)
-	case "mock":
-		return t.Mock.AddComment(tid,cmt)
-	default:
-		return errors.New("unsupported ticket sys: "+tsys)
-	}
-}
-
-func (t *Ticket)Close(tsys string, aKey string ) error {
-
-	if len(tsys) < 1 {
-		tsys = t.DefaultSys
-	}
-	tid, err := t.Adb.GetTicket(aKey)
-	if err != nil {
-		return err
 	}
 	switch tsys {
 	case "gitlab":
@@ -139,8 +102,4 @@ func (t *Ticket)Close(tsys string, aKey string ) error {
 	default:
 		return errors.New("unsupported ticket sys: "+tsys)
 	}
-}
-
-func (t *Ticket)Delete(aKey string ) error {
-	return t.Adb.DelTicket(aKey)
 }
