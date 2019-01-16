@@ -47,6 +47,7 @@ func main() {
 
 	if *args.Debug {
 		cfg.Debug = true
+		os.Setenv("DEBUG","true")
 	}
 
 	amhandler := amgr.New(cfg)
