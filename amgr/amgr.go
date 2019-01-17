@@ -138,9 +138,9 @@ func (a *Alert)Key() uint64 {
 	labs := model.LabelSet{}
 
 	for k, v := range a.Labels {
-		labs[k] = v
+		labs[model.LabelName(k)] = model.LabelValue(v)
 	}
-	return labs.Fingerprint()
+	return uint64(labs.Fingerprint())
 }
 
 func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
@@ -171,25 +171,29 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 
 	for _, alert := range agrp.Alerts {
 
+		aname := alert.Labels["alertname"]
+		node := strings.Split(alert.Labels["instance"],":")[0]
+		aKey := alert.Key()
+		tsys := alert.Annotations["ticket"]
+
+		if len(tsys) < 1 {
+			tsys = h.Ticket.DefaultSys
+		}
+
+
 		h.AlertsRecvd.With(
 			promp.Labels{
-				"name": alert.Labels["alertname"],
+				"name": aname,
 				"node": node,
 				"status": agrp.Status,
 			}).Inc()
 
-		node := strings.Split(alert.Labels["instance"],":")[0]
-		aKey := alert.Key()
-		tsys := alert.Annotations["ticket"]
-		if len(tsys) < 1 {
-			tsys = t.DefaultSys
-		}
 
 		if alert.Status == "firing" {
 
-			tsub := alert.Annotations[tsys]
+			tsub := alert.Annotations["ticket_group"]
 			if len(tsub) < 1 {
-				tsub = t.DefaultGrp
+				tsub = h.Ticket.DefaultGrp
 			}
 
 			var (
@@ -203,7 +207,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
 			if err == nil && len(tid) > 0 {
 				if h.Debug {
-					fmt.Printf("dup alert: %v",alert.labels)
+					fmt.Printf("dup alert: %v",alert.Labels)
 				}
 				return nil
 			}
@@ -213,7 +217,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			} else if  _, ok = alert.Annotations["subject"]; ok {
 				title = alert.Annotations["subject"]
 			} else {
-				title = alert.Labels["alertname"] + " on " + node
+				title = aname + " on " + node
 			}
 
 			desc = "from: " + alert.GeneratorURL + "\n"
@@ -246,16 +250,13 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				return fmt.Errorf("ticket.Create: %s",err.Error())
 			}
 
-			if err = h.Adb.AddTicket(alert,StartsAt, aKey,tid); err != nil {
+			if err = h.Adb.AddTicket(alert.StartsAt,aKey,tid); err != nil {
 				return err
 			}
 
 			remed := false
 
-			ardir := path.Join(
-				proc.PlaybookDir,
-				"roles",
-				alert.Labels["alertname"])
+			ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
 			finfo, err := os.Stat(ardir)
 			if err == nil && finfo.IsDir() {
 				err := h.Proc.Ansible(node,alert.Labels,tsys,tid)
@@ -265,7 +266,8 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				remed = true
 			}
 
-			scfn := path.Join(proc.ScriptsDir,alert.Labels["alertname"])
+			sfn := path.Join(h.Proc.ScriptsDir,aname)
+			finfo, err = os.Stat(sfn)
 			if err == nil && (finfo.Mode() & 0111) != 0 {
 				err := h.Proc.Script(node,alert.Labels,tsys,tid)
 				if err != nil {
@@ -274,9 +276,14 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				remed = true
 			}
 
-			if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
-				return fmt.Errorf("ticket comment: %s",err)
+			if remed == false {
+				tcom := fmt.Sprintf("no remediation available for %s",aname)
+
+				if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
+					return fmt.Errorf("ticket comment - %s",err.Error())
+				}
 			}
+
 		} else if alert.Status == "resolved" {
 
 			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
