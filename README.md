@@ -62,11 +62,11 @@ mock-ticket-url: http://localhost:5003/ticket
 
 * subject: name
 
- *ticket title (secondary)
+ * ticket title (secondary)
 
 * title: name
 
- *ticket title (primary)
+ * ticket title (primary)
 
 * close_resolved: bool
 
