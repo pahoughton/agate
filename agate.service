@@ -2,7 +2,7 @@
 #
 [Unit]
 Description=prometheus alertmanager alert gateway
-Documentation=https://gitlab.com/pahoughton/agate
+Documentation=https://github.com/pahoughton/agate
 After=network-online.target
 
 [Service]

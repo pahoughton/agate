@@ -10,15 +10,21 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path"
+	"sort"
 	"strings"
 	"time"
 
-	"gitlab.com/pahoughton/agate/config"
-	"gitlab.com/pahoughton/agate/ticket"
-	"gitlab.com/pahoughton/agate/proc"
+	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/ticket"
+	"github.com/pahoughton/agate/proc"
+	"github.com/pahoughton/agate/db"
 
+	"github.com/prometheus/common/model"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
+
 )
 
 const (
@@ -27,6 +33,7 @@ const (
 
 type Handler struct {
 	Debug				bool
+	Adb					*db.AlertDB
 	Ticket				*ticket.Ticket
 	Proc				*proc.Proc
 	CloseResolved		bool
@@ -36,10 +43,18 @@ type Handler struct {
 }
 
 func New(c *config.Config) *Handler {
+
+	adb, err := db.Open(path.Join(c.BaseDir, "data"), 0664, c.MaxDays);
+	if err != nil {
+		fmt.Println("FATAL: open db - ",err.Error())
+		os.Exit(1)
+	}
+
 	h := &Handler{
-		Debug:	c.Debug,
-		Ticket:	ticket.New(c),
-		CloseResolved: c.CloseResolved,
+		Debug:			c.Debug,
+		Adb:			adb,
+		Ticket:			ticket.New(c),
+		CloseResolved:	c.CloseResolved,
 
 		AlertGroupsRecvd: proma.NewCounterVec(
 			promp.CounterOpts{
@@ -118,10 +133,14 @@ type AlertGroup struct {
 	Version string `json:"version"`
 }
 
-func (a *Alert)Key() string {
-	return a.StartsAt.Format(ATimeFmt) + " " +
-		a.Labels["alertname"] + "-" +
-		a.Labels["instance"]
+func (a *Alert)Key() uint64 {
+
+	labs := model.LabelSet{}
+
+	for k, v := range a.Labels {
+		labs[model.LabelName(k)] = model.LabelValue(v)
+	}
+	return uint64(labs.Fingerprint())
 }
 
 func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
@@ -151,69 +170,140 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 		}).Inc()
 
 	for _, alert := range agrp.Alerts {
+
+		aname := alert.Labels["alertname"]
 		node := strings.Split(alert.Labels["instance"],":")[0]
+		aKey := alert.Key()
+		tsys := alert.Annotations["ticket"]
+
+		if len(tsys) < 1 {
+			tsys = h.Ticket.DefaultSys
+		}
+
 
 		h.AlertsRecvd.With(
 			promp.Labels{
-				"name": alert.Labels["alertname"],
+				"name": aname,
 				"node": node,
 				"status": agrp.Status,
 			}).Inc()
 
-		aKey := alert.Key()
 
 		if alert.Status == "firing" {
 
-			node := strings.Split(alert.Labels["instance"],":")[0]
-			title := alert.Labels["alertname"] + " on " + node
+			tsub := alert.Annotations["ticket_group"]
+			if len(tsub) < 1 {
+				tsub = h.Ticket.DefaultGrp
+			}
 
-			desc := "start_time: " + alert.StartsAt.String() + "\n"
+			var (
+				ok		bool
+				title	string
+				desc	string
+				tid		string
+			)
+
+			// dup prevention
+			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
+			if err == nil && len(tid) > 0 {
+				if h.Debug {
+					fmt.Printf("dup alert: %v",alert.Labels)
+				}
+				return nil
+			}
+
+			if _, ok = alert.Annotations["title"]; ok {
+				title = alert.Annotations["title"]
+			} else if  _, ok = alert.Annotations["subject"]; ok {
+				title = alert.Annotations["subject"]
+			} else {
+				title = aname + " on " + node
+			}
+
+			desc = "from: " + alert.GeneratorURL + "\n"
+			desc += "when: " + alert.StartsAt.String() + "\n"
 
 			desc += "\nAnnotations:\n"
-			for k, v := range alert.Annotations {
-				desc += k + ": " + v + "\n"
+			ankeys := make([]string, 0, len(alert.Annotations))
+			for ak, _ := range alert.Annotations {
+				ankeys = append(ankeys, ak)
 			}
+			sort.Strings(ankeys)
+			for _, ak := range ankeys {
+				desc += ak + ": " +  alert.Annotations[ak]  + "\n"
+			}
+
 			desc  += "\nLabels:\n"
-			for k, v := range alert.Labels {
-				desc += k + ": " + v + "\n"
+			lbkeys := make([]string, 0, len(alert.Labels))
+			for lk, _ := range alert.Labels {
+				lbkeys = append(lbkeys, lk)
 			}
-			desc += "\nfrom: " + alert.GeneratorURL + "\n"
+			sort.Strings(lbkeys)
+			for _, lk := range lbkeys {
+				desc += lk + ": " + alert.Labels[lk] + "\n"
+			}
 
-			tsys := alert.Labels["ticket"]
-			tsub := alert.Labels[tsys]
 
-			tid, err := h.Ticket.Create(tsys,tsub,aKey,title,desc);
+			tid, err = h.Ticket.Create(tsys,tsub,title,desc);
 
 			if err != nil {
 				return fmt.Errorf("ticket.Create: %s",err.Error())
 			}
 
-			if _, ok := alert.Labels["ansible"]; ok {
+			if err = h.Adb.AddTicket(alert.StartsAt,aKey,tid); err != nil {
+				return err
+			}
+
+			remed := false
+
+			ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
+			finfo, err := os.Stat(ardir)
+			if err == nil && finfo.IsDir() {
 				err := h.Proc.Ansible(node,alert.Labels,tsys,tid)
 				if err != nil {
 					return err
 				}
+				remed = true
 			}
-			if _, ok := alert.Labels["script"]; ok {
+
+			sfn := path.Join(h.Proc.ScriptsDir,aname)
+			finfo, err = os.Stat(sfn)
+			if err == nil && (finfo.Mode() & 0111) != 0 {
 				err := h.Proc.Script(node,alert.Labels,tsys,tid)
 				if err != nil {
 					return err
 				}
+				remed = true
 			}
+
+			if remed == false {
+				tcom := fmt.Sprintf("no remediation available for %s",aname)
+
+				if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
+					return fmt.Errorf("ticket comment - %s",err.Error())
+				}
+			}
+
 		} else if alert.Status == "resolved" {
-			tsys := alert.Labels["ticket"]
+
+			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
+			if err != nil {
+				fmt.Printf("WARN resolved not found: %v",alert.Labels)
+				return nil
+			}
+
 			tcom := fmt.Sprintf("resolved at %v",alert.EndsAt)
 
-			if err = h.Ticket.AddKeyComment(tsys,aKey,tcom); err != nil {
+			if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
 				return fmt.Errorf("ticket comment: %s",err)
 			}
-			// fixme - close resolved label?
+
 			if h.CloseResolved || alert.Labels["close_resolved"] == "true" {
-				if err = h.Ticket.Close(tsys,aKey); err != nil {
+				if err = h.Ticket.Close(tsys,tid); err != nil {
 					return fmt.Errorf("ticket close: %s",err)
 				}
 			}
-			if err = h.Ticket.Delete(aKey); err != nil {
+			if err = h.Adb.Delete(alert.StartsAt, aKey); err != nil {
 				return err
 			}
 		}

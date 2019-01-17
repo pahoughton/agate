@@ -39,7 +39,7 @@ func (p *Proc)Script(
 		return fmt.Errorf("Close: %s",err.Error())
 	}
 
-	scriptfn := filepath.Join(p.ScriptsDir,labels["script"])
+	scriptfn := filepath.Join(p.ScriptsDir,labels["alertname"])
 
 	cmdargs := []string{node,lfile.Name()}
 
@@ -59,7 +59,7 @@ func (p *Proc)Script(
 			tcom += "cmd error: " + err.Error() + "\n"
 		}
 		tcom += "output:\n" + string(cmdout)
-		if err = p.Ticket.AddTidComment(tsys,tid,tcom); err != nil {
+		if err = p.Ticket.AddComment(tsys,tid,tcom); err != nil {
 			return fmt.Errorf("ticket comment - %s",err.Error())
 		}
 	}

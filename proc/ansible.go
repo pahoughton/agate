@@ -60,7 +60,8 @@ func (p *Proc)Ansible(
 	}
 	cmdargs := []string{"-i", invfile.Name(),"-e"}
 
-	arole := "agate_role=" + labels["ansible"]
+	// FIXME may need to convert - to _
+	arole := "agate_role=" + labels["alertname"]
 
 	cmdargs = append(cmdargs,arole,pbfile.Name())
 
@@ -80,7 +81,7 @@ func (p *Proc)Ansible(
 			tcom += "cmd error: " + err.Error() + "\n"
 		}
 		tcom += "output:\n" + string(cmdout)
-		if err = p.Ticket.AddTidComment(tsys,tid,tcom); err != nil {
+		if err = p.Ticket.AddComment(tsys,tid,tcom); err != nil {
 			return fmt.Errorf("ticket comment - %s",err.Error())
 		}
 	}
