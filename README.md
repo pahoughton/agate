@@ -52,25 +52,25 @@ mock-ticket-url: http://localhost:5003/ticket
 
 * ticket: gitlab|mock
 
-  ticketing system
+ * ticketing system
 
 * ticket_group:
 
-** gitlab - project for issue creation
-** hpsm - incident workgroup
-** email - email to address
+ * gitlab - project for issue creation
+ * hpsm - incident workgroup
+ * email - email to address
 
 * subject: name
 
-  ticket title (secondary)
+ *ticket title (secondary)
 
 * title: name
 
-  ticket title (primary)
+ *ticket title (primary)
 
 * close_resolved: bool
 
-  close ticket when resolved
+ * close ticket when resolved
 
 ## features
 
