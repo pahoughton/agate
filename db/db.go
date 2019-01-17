@@ -128,7 +128,7 @@ func (adb *AlertDB) GetTicket(start time.Time,fp uint64) (string, error) {
 		}
 		val := bkt.Get(aKey)
 		if val == nil {
-			return fmt.Error("alert not found: %u", aKey)
+			return fmt.Errorf("alert not found: %u", aKey)
 		}
 		tid = string(val)
 		return nil
@@ -136,7 +136,7 @@ func (adb *AlertDB) GetTicket(start time.Time,fp uint64) (string, error) {
 	return tid, err
 }
 
-func (adb *AlertDB) Delete(start time.Time,fp uint64) (string, error) {
+func (adb *AlertDB) Delete(start time.Time,fp uint64) error {
 
 	bname := start.Format(BNameFmt)
 
