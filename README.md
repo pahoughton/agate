@@ -48,32 +48,17 @@ hpsm-pass: pass
 mock-ticket-url: http://localhost:5003/ticket
 ```
 
-### labels
+### annotations
 
 * ticket: gitlab|mock
 
   ticketing system
 
-* gitlab: project
+* ticket_group:
 
-  gitlab project for issue creation
-
-* hpsmwg: WGTEST
-
-  HPSM Workgroup for ticket creation
-
-* email: linux-queue@nowhere.none
-
-  email address to send tickets to
-
-* ansible: role
-
-  execute the specified ansible role on the instance alert labels
-  are added to the playbook as host vars
-
-* script: name
-
-  run the specified script passing instance as the
+** gitlab - project for issue creation
+** hpsm - incident workgroup
+** email - email to address
 
 * subject: name
 
@@ -89,28 +74,37 @@ mock-ticket-url: http://localhost:5003/ticket
 
 ## features
 
-Alerts generate a ticket via a ticket-url or ticket-email-to.
-Comments with remediation output and resolution details are also generated.
+Alerts generate a ticket via the 'ticket' system and ticket_group or
+default to the config ticket-default-sys and
+ticket-default-grp. Tickets are updated with comments that include
+remediation output and resolution details.
 
-Ticket have titles and descriptions. The description includes all
-label and annotations. The title is either the title label,
-subject label or the alertname and node concatenated.
+Ticket have titles and descriptions.  The title is either the
+annotation.title, annotation.subject or the labels.alertname and
+labels.instance.
 
-Duplicate alerts, based on startsAt, from and instance labels are ignored.
+Duplicate alerts are logged and ignored.
 
-## install
-
-An example [sytemd service](../master/agate.service) is
-provided. The service User must be able to ssh to alerting instances
-with out password and have the ability to sudo for remediation.
+A remediation ansible role and/or script will be ran when
+base_dir/playbook/role/labels.alertname and/or
+base_dir/scripts/labels.alertname exists.
 
 Ticket IDs are stored by an alert key in data-dir to update tickets with
 remediation results and alert resolution. Alerts older than
 data-max-days are removed every 24 hours.
 
-There is a script in the rpm directory to generate a rpm using
-rpmbuild for systems that use systemd. The default data, playbook and
-scripts directories are under /var/lib/agate
+## install
+
+A puppet module,
+[puppet-agate](https://github.com/pahoughton/puppet-agate), and an
+anisble role
+[ansible-agate](https://github.com/pahoughton/ansible-agate) are
+availbe for installation. The specified user must be able to ssh to
+remote machines and sudo for remediation.
+
+There is also a script in the rpm directory to generate a rpm using
+rpmbuild for systems that use systemd. The default config, data, playbook and
+scripts directories are created under /var/lib/agate
 
 ## validation - under developement
 
