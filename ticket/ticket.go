@@ -53,12 +53,6 @@ func (t *Ticket) Create(
 	var tid  string
 	var err  error
 
-	if len(tsys) < 1 {
-		tsys = t.DefaultSys
-	}
-	if len(tsub) < 1 {
-		tsub = t.DefaultGrp
-	}
 	switch tsys {
 	case "gitlab":
 		tid, err = t.Gitlab.CreateIssue(tsub,title,desc)
@@ -76,9 +70,6 @@ func (t *Ticket) Create(
 
 func (t *Ticket)AddComment(tsys string, tid string, cmt string ) error {
 
-	if len(tsys) < 1 {
-		tsys = t.DefaultSys
-	}
 	switch tsys {
 	case "gitlab":
 		return t.Gitlab.AddComment(tid,cmt)
@@ -91,9 +82,6 @@ func (t *Ticket)AddComment(tsys string, tid string, cmt string ) error {
 
 func (t *Ticket)Close(tsys string, tid string ) error {
 
-	if len(tsys) < 1 {
-		tsys = t.DefaultSys
-	}
 	switch tsys {
 	case "gitlab":
 		return t.Gitlab.Close(tid)

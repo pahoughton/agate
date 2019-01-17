@@ -21,8 +21,10 @@ import (
 	"github.com/pahoughton/agate/proc"
 	"github.com/pahoughton/agate/db"
 
+	"github.com/prometheus/common/model"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
+
 )
 
 const (
@@ -131,10 +133,14 @@ type AlertGroup struct {
 	Version string `json:"version"`
 }
 
-func (a *Alert)Key() string {
-	return a.StartsAt.Format(ATimeFmt) + " " +
-		a.Labels["alertname"] + "-" +
-		a.Labels["instance"]
+func (a *Alert)Key() uint64 {
+
+	labs := model.LabelSet{}
+
+	for k, v := range a.Labels {
+		labs[k] = v
+	}
+	return labs.Fingerprint()
 }
 
 func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
@@ -164,7 +170,6 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 		}).Inc()
 
 	for _, alert := range agrp.Alerts {
-		node := strings.Split(alert.Labels["instance"],":")[0]
 
 		h.AlertsRecvd.With(
 			promp.Labels{
@@ -173,11 +178,19 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				"status": agrp.Status,
 			}).Inc()
 
+		node := strings.Split(alert.Labels["instance"],":")[0]
 		aKey := alert.Key()
+		tsys := alert.Annotations["ticket"]
+		if len(tsys) < 1 {
+			tsys = t.DefaultSys
+		}
 
 		if alert.Status == "firing" {
 
-			node := strings.Split(alert.Labels["instance"],":")[0]
+			tsub := alert.Annotations[tsys]
+			if len(tsub) < 1 {
+				tsub = t.DefaultGrp
+			}
 
 			var (
 				ok		bool
@@ -187,15 +200,18 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			)
 
 			// dup prevention
-			tid, err := h.Adb.GetTicket(aKey)
+			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
 			if err == nil && len(tid) > 0 {
+				if h.Debug {
+					fmt.Printf("dup alert: %v",alert.labels)
+				}
 				return nil
 			}
 
-			if _, ok = alert.Labels["title"]; ok {
-				title = alert.Labels["title"]
-			} else if  _, ok = alert.Labels["subject"]; ok {
-				title = alert.Labels["subject"]
+			if _, ok = alert.Annotations["title"]; ok {
+				title = alert.Annotations["title"]
+			} else if  _, ok = alert.Annotations["subject"]; ok {
+				title = alert.Annotations["subject"]
 			} else {
 				title = alert.Labels["alertname"] + " on " + node
 			}
@@ -223,8 +239,6 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				desc += lk + ": " + alert.Labels[lk] + "\n"
 			}
 
-			tsys := alert.Labels["ticket"]
-			tsub := alert.Labels[tsys]
 
 			tid, err = h.Ticket.Create(tsys,tsub,title,desc);
 
@@ -232,31 +246,45 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				return fmt.Errorf("ticket.Create: %s",err.Error())
 			}
 
-			if err = h.Adb.AddTicket(aKey,tid); err != nil {
+			if err = h.Adb.AddTicket(alert,StartsAt, aKey,tid); err != nil {
 				return err
 			}
 
-			if _, ok := alert.Labels["ansible"]; ok {
+			remed := false
+
+			ardir := path.Join(
+				proc.PlaybookDir,
+				"roles",
+				alert.Labels["alertname"])
+			finfo, err := os.Stat(ardir)
+			if err == nil && finfo.IsDir() {
 				err := h.Proc.Ansible(node,alert.Labels,tsys,tid)
 				if err != nil {
 					return err
 				}
+				remed = true
 			}
-			if _, ok := alert.Labels["script"]; ok {
+
+			scfn := path.Join(proc.ScriptsDir,alert.Labels["alertname"])
+			if err == nil && (finfo.Mode() & 0111) != 0 {
 				err := h.Proc.Script(node,alert.Labels,tsys,tid)
 				if err != nil {
 					return err
 				}
+				remed = true
+			}
+
+			if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
+				return fmt.Errorf("ticket comment: %s",err)
 			}
 		} else if alert.Status == "resolved" {
 
-			tid, err := h.Adb.GetTicket(aKey)
+			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
 			if err != nil {
-				// ignore not found
+				fmt.Printf("WARN resolved not found: %v",alert.Labels)
 				return nil
 			}
 
-			tsys := alert.Labels["ticket"]
 			tcom := fmt.Sprintf("resolved at %v",alert.EndsAt)
 
 			if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
@@ -268,7 +296,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 					return fmt.Errorf("ticket close: %s",err)
 				}
 			}
-			if err = h.Adb.Delete(aKey); err != nil {
+			if err = h.Adb.Delete(alert.StartsAt, aKey); err != nil {
 				return err
 			}
 		}
