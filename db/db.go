@@ -10,11 +10,13 @@ package db
 
 import (
 	"errors"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path"
 	"strings"
 	"time"
+
 
 	"github.com/boltdb/bolt"
 )
@@ -87,9 +89,16 @@ func (adb *AlertDB) CleanBuckets() {
 	}
 }
 
-func (adb *AlertDB) AddTicket(aKey string, tid string) error {
+func (adb *AlertDB) AddTicket(
+	start	time.Time,
+	fp		uint64,
+	tid		string) error {
 
-	bname := aKey[:len(BNameFmt)]
+	bname := start.Format(BNameFmt)
+
+	aKey := make([]byte, binary.MaxVarintLen64)
+
+	binary.PutUvarint(aKey, fp)
 
 	err := adb.db.Update(func(tx *bolt.Tx) error {
 
@@ -97,14 +106,18 @@ func (adb *AlertDB) AddTicket(aKey string, tid string) error {
 		if err != nil {
 			return err
 		}
-		return bkt.Put([]byte(aKey),[]byte(tid))
+		return bkt.Put(aKey,[]byte(tid))
 	})
 	return err
 }
 
-func (adb *AlertDB) GetTicket(aKey string) (string, error) {
+func (adb *AlertDB) GetTicket(start time.Time,fp uint64) (string, error) {
 
-	bname := aKey[:len(BNameFmt)]
+	bname := start.Format(BNameFmt)
+
+	aKey := make([]byte, binary.MaxVarintLen64)
+
+	binary.PutUvarint(aKey, fp)
 
 	var tid string
 
@@ -113,9 +126,9 @@ func (adb *AlertDB) GetTicket(aKey string) (string, error) {
 		if bkt == nil {
 			return errors.New("bucket not found " + bname)
 		}
-		val := bkt.Get([]byte(aKey))
+		val := bkt.Get(aKey)
 		if val == nil {
-			return errors.New("alert not found: " + aKey)
+			return fmt.Errorf("alert not found: %u", aKey)
 		}
 		tid = string(val)
 		return nil
@@ -123,16 +136,20 @@ func (adb *AlertDB) GetTicket(aKey string) (string, error) {
 	return tid, err
 }
 
-func (adb *AlertDB) Delete(aKey string) error {
+func (adb *AlertDB) Delete(start time.Time,fp uint64) error {
 
-	bname := aKey[:len(BNameFmt)]
+	bname := start.Format(BNameFmt)
+
+	aKey := make([]byte, binary.MaxVarintLen64)
+
+	binary.PutUvarint(aKey, fp)
 
 	err := adb.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket([]byte(bname))
 		if bkt == nil {
 			return errors.New("bucket not found " + bname)
 		}
-		return bkt.Delete([]byte(aKey))
+		return bkt.Delete(aKey)
 	})
 	return err
 }

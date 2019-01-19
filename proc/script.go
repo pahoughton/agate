@@ -39,7 +39,7 @@ func (p *Proc)Script(
 		return fmt.Errorf("Close: %s",err.Error())
 	}
 
-	scriptfn := filepath.Join(p.ScriptsDir,labels["script"])
+	scriptfn := filepath.Join(p.ScriptsDir,labels["alertname"])
 
 	cmdargs := []string{node,lfile.Name()}
 
