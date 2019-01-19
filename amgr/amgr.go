@@ -39,6 +39,7 @@ type Handler struct {
 	CloseResolved		bool
 	AlertGroupsRecvd	*promp.CounterVec
 	AlertsRecvd			*promp.CounterVec
+	AlertDups			*promp.CounterVec
 	Errors				promp.Counter
 }
 
@@ -73,6 +74,15 @@ func New(c *config.Config) *Handler {
 				"name",
 				"node",
 				"status",
+			}),
+		AlertDups: proma.NewCounterVec(
+			promp.CounterOpts{
+				Namespace: "agate",
+				Name:      "alert_dups_total",
+				Help:      "number of duplicate alerts received",
+			}, []string{
+				"name",
+				"node",
 			}),
 		Errors: proma.NewCounter(
 			promp.CounterOpts{
@@ -180,7 +190,6 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			tsys = h.Ticket.DefaultSys
 		}
 
-
 		h.AlertsRecvd.With(
 			promp.Labels{
 				"name": aname,
@@ -188,13 +197,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				"status": agrp.Status,
 			}).Inc()
 
-
 		if alert.Status == "firing" {
-
-			tsub := alert.Annotations["ticket_group"]
-			if len(tsub) < 1 {
-				tsub = h.Ticket.DefaultGrp
-			}
 
 			var (
 				ok		bool
@@ -204,8 +207,13 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			)
 
 			// dup prevention
-			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
+			tid, err = h.Adb.GetTicket(alert.StartsAt, aKey)
 			if err == nil && len(tid) > 0 {
+				h.AlertDups.With(
+					promp.Labels{
+						"name": aname,
+						"node": node,
+					}).Inc()
 				if h.Debug {
 					fmt.Printf("dup alert: %v",alert.Labels)
 				}
@@ -243,6 +251,31 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				desc += lk + ": " + alert.Labels[lk] + "\n"
 			}
 
+			aremed := false
+			sremed := false
+
+			ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
+			finfo, err := os.Stat(ardir)
+			if err == nil && finfo.IsDir() {
+				aremed = true
+				desc += "\nansible remediation pending\n"
+			}
+
+			sfn := path.Join(h.Proc.ScriptsDir,aname)
+			finfo, err = os.Stat(sfn)
+			if err == nil && (finfo.Mode() & 0111) != 0 {
+				sremed = true;
+				desc += "\nscript remediation pending\n"
+			}
+
+			if aremed == false && sremed == false  {
+				desc += "\nno remediation available\n"
+			}
+
+			tsub := alert.Annotations["ticket_group"]
+			if len(tsub) < 1 {
+				tsub = h.Ticket.DefaultGrp
+			}
 
 			tid, err = h.Ticket.Create(tsys,tsub,title,desc);
 
@@ -253,34 +286,16 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			if err = h.Adb.AddTicket(alert.StartsAt,aKey,tid); err != nil {
 				return err
 			}
-
-			remed := false
-
-			ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
-			finfo, err := os.Stat(ardir)
-			if err == nil && finfo.IsDir() {
+			if aremed {
 				err := h.Proc.Ansible(node,alert.Labels,tsys,tid)
 				if err != nil {
 					return err
 				}
-				remed = true
 			}
-
-			sfn := path.Join(h.Proc.ScriptsDir,aname)
-			finfo, err = os.Stat(sfn)
-			if err == nil && (finfo.Mode() & 0111) != 0 {
+			if sremed {
 				err := h.Proc.Script(node,alert.Labels,tsys,tid)
 				if err != nil {
 					return err
-				}
-				remed = true
-			}
-
-			if remed == false {
-				tcom := fmt.Sprintf("no remediation available for %s",aname)
-
-				if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
-					return fmt.Errorf("ticket comment - %s",err.Error())
 				}
 			}
 
@@ -298,7 +313,9 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 				return fmt.Errorf("ticket comment: %s",err)
 			}
 
-			if h.CloseResolved || alert.Labels["close_resolved"] == "true" {
+			if h.CloseResolved ||
+				alert.Annotations["close_resolved"] == "true" {
+
 				if err = h.Ticket.Close(tsys,tid); err != nil {
 					return fmt.Errorf("ticket close: %s",err)
 				}

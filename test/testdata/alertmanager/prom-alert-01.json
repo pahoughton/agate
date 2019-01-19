@@ -2,7 +2,7 @@
   {
     "labels": {
       "alertname": "log-http-error",
-      "source": "log-file"
+      "no_resolve": "true"
     },
     "annotations": {
       "info": "errors found in splunk:http error log"

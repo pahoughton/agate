@@ -15,8 +15,8 @@ route:
 
   routes:
     - receiver: 'agate-no-resolve'
-      match:
-        source: log-file
+      match_re:
+         no_resolve: .*
       group_by:
         - alertname
       group_wait: 10s
