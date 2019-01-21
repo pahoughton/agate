@@ -9,37 +9,34 @@ import (
 	"os"
 	"os/exec"
 
+	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
-func (p *Proc)Ansible(
-	node	string,
-	labels	map[string]string,
-	tsys	string,
-	tid		string) error {
+func (p *Proc)Ansible( node string, labels pmod.LabelSet) (string, error) {
 
 	// create inventory file for ansible
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
-		return fmt.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", fmt.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(invfile.Name())
 	if _, err := invfile.WriteString(node + "\n"); err != nil {
-		return fmt.Errorf("WriteString: %s",err.Error())
+		return "", fmt.Errorf("WriteString: %s",err.Error())
 	}
 	if err := invfile.Close(); err != nil {
-		return fmt.Errorf("Close: %s",err.Error())
+		return "", fmt.Errorf("Close: %s",err.Error())
 	}
 
 	pbfile, err := ioutil.TempFile(p.PlaybookDir,node)
 	if err != nil {
-		return fmt.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", fmt.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(pbfile.Name())
 	pbvars := "  vars:\n"
 	for k, v := range labels {
-		pbvars += "    " +k+": "+v+"\n"
+		pbvars += "    " +string(k)+": "+string(v)+"\n"
 	}
 	pbcont := `---
 - name: agate {{ agate_role }} remediation
@@ -49,10 +46,10 @@ func (p *Proc)Ansible(
     - "{{ agate_role }}"
 `
 	if _, err := pbfile.WriteString(pbcont); err != nil {
-		return fmt.Errorf("WriteString: %s",err.Error())
+		return "", fmt.Errorf("WriteString: %s",err.Error())
 	}
 	if err := pbfile.Close(); err != nil {
-		return fmt.Errorf("Close: %s",err.Error())
+		return "", fmt.Errorf("Close: %s",err.Error())
 	}
 
 	if p.Debug {
@@ -60,8 +57,7 @@ func (p *Proc)Ansible(
 	}
 	cmdargs := []string{"-i", invfile.Name(),"-e"}
 
-	// FIXME may need to convert - to _
-	arole := "agate_role=" + labels["alertname"]
+	arole := "agate_role=" + string(labels["alertname"])
 
 	cmdargs = append(cmdargs,arole,pbfile.Name())
 
@@ -74,26 +70,23 @@ func (p *Proc)Ansible(
 	} else {
 		cmdstatus = "success"
 	}
-	if len(tid) > 0 {
-		tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
-		tcom += "results: " + cmdstatus + "\n"
-		if err != nil {
-			tcom += "cmd error: " + err.Error() + "\n"
-		}
-		tcom += "output:\n" + string(cmdout)
-		if err = p.Ticket.AddComment(tsys,tid,tcom); err != nil {
-			return fmt.Errorf("ticket comment - %s",err.Error())
-		}
+
+	tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
+	tcom += "results: " + cmdstatus + "\n"
+	if err != nil {
+		tcom += "cmd error: " + err.Error() + "\n"
 	}
+	tcom += "output:\n" + string(cmdout)
+
 	if p.Debug {
 		fmt.Printf("DEBUG: ansible-playbook %v\noutput: %s\n",cmdargs,cmdout)
 	}
 
 	p.AnsiblePlays.With(
 		promp.Labels{
-			"role": labels["ansible"],
+			"role": string(labels["alertname"]),
 			"status": cmdstatus,
 		}).Inc()
 
-	return nil
+	return tcom, err
 }

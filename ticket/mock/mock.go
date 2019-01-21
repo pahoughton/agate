@@ -9,27 +9,29 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/pahoughton/agate/model"
 )
 
 type Mock struct {
-	Debug	bool
-	Url		string
+	debug	bool
+	url		string
 }
 
 func New(url string, debug bool) *Mock {
 	m := &Mock{
-		Debug:	debug,
-		Url:	url,
+		debug:	debug,
+		url:	url,
 	}
 	return m
 }
 
-func (m *Mock)Create(title string, desc string) (string, error) {
+func (m *Mock)Create(a model.Alert) (string, error) {
 
 	tckt := map[string]string{
-		"title":	title,
+		"title":	a.Title(),
 		"state":	"firing",
-		"desc":		desc,
+		"desc":		a.Desc(),
 	}
 
 	tcktJson, err := json.Marshal(tckt)
@@ -38,13 +40,13 @@ func (m *Mock)Create(title string, desc string) (string, error) {
 	}
 
 	resp, err := http.Post(
-		m.Url,
+		m.url,
 		"application/json",
 		bytes.NewReader(tcktJson))
 
     if err != nil {
 		return "", fmt.Errorf("http.post-%s: %s \n%+v\n",
-			m.Url,err.Error(),tcktJson)
+			m.url,err.Error(),tcktJson)
     }
 	defer resp.Body.Close()
 
@@ -83,7 +85,7 @@ func (m *Mock)AddComment(tid string, cmt string) error {
 	}
 
 	resp, err := http.Post(
-		m.Url,
+		m.url,
 		"application/json",
 		bytes.NewReader(tjson))
 
@@ -115,7 +117,7 @@ func (m *Mock)Close(tid string) error {
 	}
 
 	resp, err := http.Post(
-		m.Url,
+		m.url,
 		"application/json",
 		bytes.NewReader(tjson))
 

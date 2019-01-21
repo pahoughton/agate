@@ -16,22 +16,29 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestLoadHpsm(t *testing.T) {
+func TestLoadFull(t *testing.T) {
 
 	var cfgExp = Config{
-		ListenAddr:		":9201",
-		BaseDir:		"/var/lib/agate",
-		MaxDays:		15,
-		EmailSmtp:		"localhost:25",
-		EmailFrom:		"no-reply-agate@nowhere.none",
-		GitlabUrl:		"https://gitlab.com/api/v4",
-		GitlabToken:	"secret-token",
-		HpsmUrl:		"https://hpsm/api/v3",
-		HpsmUser:		"hpsm",
-		HpsmPass:		"pass",
+		ListenAddr:			":9201",
+		BaseDir:			"/var/lib/agate",
+		MaxDays:			15,
+		TicketDefaultSys:	"gitlab",
+		TicketDefaultGrp:	"user/project",
+		CloseResolved:		true,
+		EmailSmtp:			"localhost:25",
+		EmailFrom:			"no-reply-agate@nowhere.none",
+		GitlabUrl:			"https://gitlab.com/api/v4",
+		GitlabToken:		"secret-token",
+		HpsmUrl:			"https://hpsm/api/v3",
+		HpsmUser:			"hpsm",
+		HpsmPass:			"pass",
+		MockURL:			"http://localhost:9202/ticket",
+		DataDir:			"/var/lib/agate/data"
+		PlaybookDir:		"/var/lib/agate/playbook"
+		ScriptsDir:			"/var/lib/agate/scripts"
 	}
 
-	cfgfn := "testdata/config.good.yml"
+	cfgfn := "testdata/config.good.full.yml"
 
 	cfgGot, err := LoadFile(cfgfn)
 
@@ -39,19 +46,22 @@ func TestLoadHpsm(t *testing.T) {
 		t.Errorf("LoadFile %s: %s",cfgfn,err)
 	}
 
-	ymlGot, err := yaml.Marshal(cfgGot)
+	gotYml, err := yaml.Marshal(cfgGot)
 	if err != nil {
 		t.Fatalf("yaml.Marshal: %s",err)
 	}
 
-	ymlExp, err := yaml.Marshal(cfgExp)
+	expYml, err := yaml.Marshal(cfgExp)
 	if err != nil {
 		t.Fatalf("yaml.Marshal: %s",err)
 	}
-	if ! reflect.DeepEqual(ymlGot, ymlExp) {
-		t.Fatalf("%s: unexpected diff:\n  got:\n%s\n  exp:\n%s\n"
-			cfgFn,
-			ymlGot,
-			ymlExp)
+	gotLines := strings.Split(string(gotYml), "\n")
+	expLines := strings.Split(string(expYml),"\n")
+
+	for i, gv := range gotLines {
+		if gv != expLines[i] {
+			t.Fatalf("\n%s !=\n%s\nGOT:\n%s\nEXP:\n%s\n",
+				gv,expLines[i],gotYml,expYml)
+		}
 	}
 }

@@ -7,21 +7,21 @@ package amgr
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
-	"sort"
 	"strings"
-	"time"
 
+	"github.com/pahoughton/agate/model"
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/ticket"
 	"github.com/pahoughton/agate/proc"
 	"github.com/pahoughton/agate/db"
 
-	"github.com/prometheus/common/model"
+	pmod "github.com/prometheus/common/model"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 
@@ -43,7 +43,7 @@ type Handler struct {
 	Errors				promp.Counter
 }
 
-func New(c *config.Config) *Handler {
+func New(c *config.Config, dbg bool) *Handler {
 
 	adb, err := db.Open(path.Join(c.BaseDir, "data"), 0664, c.MaxDays);
 	if err != nil {
@@ -52,9 +52,10 @@ func New(c *config.Config) *Handler {
 	}
 
 	h := &Handler{
-		Debug:			c.Debug,
+		Debug:			dbg,
 		Adb:			adb,
-		Ticket:			ticket.New(c),
+		Ticket:			ticket.New(c,dbg),
+		Proc:			proc.New(c,dbg),
 		CloseResolved:	c.CloseResolved,
 
 		AlertGroupsRecvd: proma.NewCounterVec(
@@ -92,7 +93,6 @@ func New(c *config.Config) *Handler {
 			}),
 	}
 
-	h.Proc = proc.New(c,h.Ticket)
 
 	return h
 
@@ -103,54 +103,6 @@ func (h *Handler)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 		fmt.Println("ERROR: ",err.Error())
 		h.Errors.Inc()
     }
-}
-
-
-
-type Alert struct {
-
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	StartsAt time.Time `json:"startsAt"`
-
-	EndsAt time.Time `json:"endsAt,omitempty"`
-
-	GeneratorURL string `json:"generatorURL"`
-
-	Labels map[string]string `json:"labels"`
-
-	Status string `json:"status"`
-}
-
-type AlertGroup struct {
-
-	Alerts []Alert `json:"alerts"`
-
-	CommonAnnotations map[string]string `json:"commonAnnotations,omitempty"`
-
-	CommonLabels map[string]string `json:"commonLabels,omitempty"`
-
-	ExternalURL string `json:"externalURL"`
-
-	GroupKey string `json:"groupKey"`
-
-	GroupLabels map[string]string `json:"groupLabels,omitempty"`
-
-	Receiver string `json:"receiver"`
-
-	Status string `json:"status"`
-
-	Version string `json:"version"`
-}
-
-func (a *Alert)Key() uint64 {
-
-	labs := model.LabelSet{}
-
-	for k, v := range a.Labels {
-		labs[model.LabelName(k)] = model.LabelValue(v)
-	}
-	return uint64(labs.Fingerprint())
 }
 
 func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
@@ -169,7 +121,7 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 		fmt.Println("DEBUG req body\n",dbgbuf.String())
 	}
 
-	var agrp AlertGroup
+	var agrp model.AlertGroup
 	if err := json.Unmarshal(b, &agrp); err != nil {
 		return fmt.Errorf("json.Unmarshal alert: %s\n%v",err.Error(),b)
     }
@@ -179,35 +131,31 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 			"status": agrp.Status,
 		}).Inc()
 
-	for _, alert := range agrp.Alerts {
+	for _, a := range agrp.Alerts {
 
-		aname := alert.Labels["alertname"]
-		node := strings.Split(alert.Labels["instance"],":")[0]
-		aKey := alert.Key()
-		tsys := alert.Annotations["ticket"]
+		aname := a.Name()
+		aKey := a.Key()
+		node := "unknown"
 
-		if len(tsys) < 1 {
-			tsys = h.Ticket.DefaultSys
+		if inst, ok := a.Labels["instance"]; ok {
+			node = strings.Split(string(inst),":")[0]
 		}
 
 		h.AlertsRecvd.With(
 			promp.Labels{
 				"name": aname,
 				"node": node,
-				"status": agrp.Status,
+				"status": string(a.Status),
 			}).Inc()
 
-		if alert.Status == "firing" {
+		if a.Status == "firing" {
 
 			var (
-				ok		bool
-				title	string
-				desc	string
 				tid		string
 			)
 
 			// dup prevention
-			tid, err = h.Adb.GetTicket(alert.StartsAt, aKey)
+			tid, err = h.Adb.GetTicket(a.StartsAt, aKey)
 			if err == nil && len(tid) > 0 {
 				h.AlertDups.With(
 					promp.Labels{
@@ -215,112 +163,98 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 						"node": node,
 					}).Inc()
 				if h.Debug {
-					fmt.Printf("dup alert: %v",alert.Labels)
+					fmt.Printf("DEBUG: dup alert: %s",a.Labels.String())
 				}
 				return nil
 			}
 
-			if _, ok = alert.Annotations["title"]; ok {
-				title = alert.Annotations["title"]
-			} else if  _, ok = alert.Annotations["subject"]; ok {
-				title = alert.Annotations["subject"]
-			} else {
-				title = aname + " on " + node
-			}
-
-			desc = "from: " + alert.GeneratorURL + "\n"
-			desc += "when: " + alert.StartsAt.String() + "\n"
-
-			desc += "\nAnnotations:\n"
-			ankeys := make([]string, 0, len(alert.Annotations))
-			for ak, _ := range alert.Annotations {
-				ankeys = append(ankeys, ak)
-			}
-			sort.Strings(ankeys)
-			for _, ak := range ankeys {
-				desc += ak + ": " +  alert.Annotations[ak]  + "\n"
-			}
-
-			desc  += "\nLabels:\n"
-			lbkeys := make([]string, 0, len(alert.Labels))
-			for lk, _ := range alert.Labels {
-				lbkeys = append(lbkeys, lk)
-			}
-			sort.Strings(lbkeys)
-			for _, lk := range lbkeys {
-				desc += lk + ": " + alert.Labels[lk] + "\n"
-			}
-
+			pending := ""
 			aremed := false
 			sremed := false
+
 
 			ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
 			finfo, err := os.Stat(ardir)
 			if err == nil && finfo.IsDir() {
 				aremed = true
-				desc += "\nansible remediation pending\n"
+				pending += "ansible remediation pending\n"
 			}
 
 			sfn := path.Join(h.Proc.ScriptsDir,aname)
 			finfo, err = os.Stat(sfn)
 			if err == nil && (finfo.Mode() & 0111) != 0 {
 				sremed = true;
-				desc += "\nscript remediation pending\n"
+				pending += "script remediation pending\n"
 			}
 
 			if aremed == false && sremed == false  {
-				desc += "\nno remediation available\n"
+				pending += "no remediation available\n"
 			}
 
-			tsub := alert.Annotations["ticket_group"]
-			if len(tsub) < 1 {
-				tsub = h.Ticket.DefaultGrp
-			}
-
-			tid, err = h.Ticket.Create(tsys,tsub,title,desc);
+			a.Annotations["pending"] = pmod.LabelValue(pending)
+			tid, err = h.Ticket.Create(a)
 
 			if err != nil {
 				return fmt.Errorf("ticket.Create: %s",err.Error())
 			}
 
-			if err = h.Adb.AddTicket(alert.StartsAt,aKey,tid); err != nil {
+			if err = h.Adb.AddTicket(a.StartsAt,aKey,tid); err != nil {
 				return err
 			}
+
+			procErr := ""
+
 			if aremed {
-				err := h.Proc.Ansible(node,alert.Labels,tsys,tid)
+				emsg := ""
+				out, err := h.Proc.Ansible(node,a.Labels)
 				if err != nil {
-					return err
+					emsg = "ERROR: " + err.Error() + "\n"
+					procErr += "ansible - " + err.Error() + "\n"
+				}
+				tcom := "ansible remediation results\n" + emsg + out
+
+				if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket add comment: %s\n%s",err,tcom)
 				}
 			}
+
 			if sremed {
-				err := h.Proc.Script(node,alert.Labels,tsys,tid)
+				emsg := ""
+				out, err := h.Proc.Script(node,a.Labels)
 				if err != nil {
-					return err
+					emsg = "ERROR: " + err.Error() + "\n"
+					procErr += "script - " + err.Error() + "\n"
+				}
+				tcom := "script remediation results\n" + emsg + out
+
+				if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket add comment: %s\n%s",err,tcom)
 				}
 			}
+			if len(procErr) > 0 {
+				return errors.New(procErr)
+			}
+		} else if a.Status == "resolved" {
 
-		} else if alert.Status == "resolved" {
-
-			tid, err := h.Adb.GetTicket(alert.StartsAt, aKey)
+			tid, err := h.Adb.GetTicket(a.StartsAt, aKey)
 			if err != nil {
-				fmt.Printf("WARN resolved not found: %v",alert.Labels)
+				fmt.Printf("WARN resolved not found: %v",a.Labels)
 				return nil
 			}
 
-			tcom := fmt.Sprintf("resolved at %v",alert.EndsAt)
+			tcom := fmt.Sprintf("resolved at %v",a.EndsAt)
 
-			if err = h.Ticket.AddComment(tsys,tid,tcom); err != nil {
-				return fmt.Errorf("ticket comment: %s",err)
+			if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+				return fmt.Errorf("ticket comment: %s\n%s",err,tcom)
 			}
 
-			if h.CloseResolved ||
-				alert.Annotations["close_resolved"] == "true" {
+			if h.CloseResolved || a.Annotations["close_resolved"] == "true" {
 
-				if err = h.Ticket.Close(tsys,tid); err != nil {
+				if err = h.Ticket.Close(a,tid); err != nil {
 					return fmt.Errorf("ticket close: %s",err)
 				}
 			}
-			if err = h.Adb.Delete(alert.StartsAt, aKey); err != nil {
+			if err = h.Adb.Delete(a.StartsAt, aKey); err != nil {
 				return err
 			}
 		}
