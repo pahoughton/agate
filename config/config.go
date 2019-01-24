@@ -22,7 +22,10 @@ type Config struct {
 	EmailFrom			string	`yaml:"email-from,omitempty"`
 	GitlabURL			string	`yaml:"gitlab-url,omitempty"`
 	GitlabToken			string	`yaml:"gitlab-token,omitempty"`
-	HpsmURL				string	`yaml:"hpsm-url,omitempty"`
+	HpsmURL				string	`yaml:"hpsm-base-url,omitempty"`
+	HpsmCreateEp		string	`yaml:"hpsm-create-ep,omitempty"`
+	HpsmUpdateEp		string	`yaml:"hpsm-update-ep,omitempty"`
+	HpsmCloseEp			string	`yaml:"hpsm-close-ep,omitempty"`
 	HpsmUser			string	`yaml:"hpsm-user,omitempty"`
 	HpsmPass			string	`yaml:"hpsm-pass,omitempty"`
 	MockURL				string	`yaml:"mock-ticket-url,omitempty"`
