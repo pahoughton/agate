@@ -72,7 +72,11 @@ func (g *Gitlab)AddComment(tid string, cmt string) error {
 	return nil
 }
 
-func (g *Gitlab)Close(tid string) error {
+func (g *Gitlab)Close(tid, cmt string) error {
+
+	if len(cmt) > 0 {
+		g.AddComment(tid,cmt)
+	}
 
 	tida := strings.Split(tid,":")
 	prj := tida[0]

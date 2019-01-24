@@ -244,16 +244,17 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 
 			tcom := fmt.Sprintf("resolved at %v",a.EndsAt)
 
-			if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
-				return fmt.Errorf("ticket comment: %s\n%s",err,tcom)
-			}
-
 			if h.CloseResolved || a.Annotations["close_resolved"] == "true" {
 
-				if err = h.Ticket.Close(a,tid); err != nil {
+				if err = h.Ticket.Close(a,tid,tcom); err != nil {
 					return fmt.Errorf("ticket close: %s",err)
 				}
+			} else {
+				if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket comment: %s\n%s",err,tcom)
+				}
 			}
+
 			if err = h.Adb.Delete(a.StartsAt, aKey); err != nil {
 				return err
 			}

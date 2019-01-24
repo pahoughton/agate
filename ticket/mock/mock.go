@@ -106,7 +106,12 @@ func (m *Mock)AddComment(tid string, cmt string) error {
 	return nil
 }
 
-func (m *Mock)Close(tid string) error {
+func (m *Mock)Close(tid, cmt string) error {
+
+	if len(cmt) > 0 {
+		m.AddComment(tid,cmt)
+	}
+
 	tmap := map[string]string{
 		"id":		tid,
 		"state":	"closed",

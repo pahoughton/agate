@@ -32,7 +32,14 @@ func New(c *config.Config, dbg bool) *Ticket {
 		DefaultSys: c.TicketDefaultSys,
 		DefaultGrp:	c.TicketDefaultGrp,
 		Gitlab:		gitlab.New(c.GitlabURL,c.GitlabToken,dbg),
-		HPSM:		hpsm.New(c.HpsmURL,c.HpsmUser,c.HpsmPass,dbg),
+		HPSM:		hpsm.New(
+			c.HpsmURL,
+			c.HpsmCreateEp,
+			c.HpsmUpdateEp,
+			c.HpsmCloseEp,
+			c.HpsmUser,
+			c.HpsmPass,
+			dbg),
 		Mock:		mock.New(c.MockURL,dbg),
 
 		TicketsGend: proma.NewCounterVec(
@@ -98,15 +105,15 @@ func (t *Ticket)AddComment(a model.Alert, tid, cmt string ) error {
 	}
 }
 
-func (t *Ticket)Close(a model.Alert,tid string) error {
+func (t *Ticket)Close(a model.Alert, tid, cmt string) error {
 
 	switch t.Sys(a) {
 	case "hpsm":
-		return t.HPSM.Close(tid)
+		return t.HPSM.Close(tid,cmt)
 	case "gitlab":
-		return t.Gitlab.Close(tid)
+		return t.Gitlab.Close(tid,cmt)
 	case "mock":
-		return t.Mock.Close(tid)
+		return t.Mock.Close(tid,cmt)
 	default:
 		return errors.New("unsupported ticket sys: "+t.Sys(a))
 	}
