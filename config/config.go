@@ -13,18 +13,19 @@ import (
 
 type Config struct {
 	ListenAddr			string	`yaml:"listen-addr"`
-	TicketDefaultSys	string	`yaml:"ticket-default-sys"`
-	TicketDefaultGrp	string	`yaml:"ticket-default-grp"`
-	Debug				bool	`yaml:"debug,omitempty"`
-	CloseResolved		bool	`yaml:"close-resolved,omitempty"`
 	BaseDir				string	`yaml:"base-dir,omitempty"`
 	MaxDays				uint	`yaml:"max-days,omitempty"`
+	TicketDefaultSys	string	`yaml:"ticket-default-sys"`
+	TicketDefaultGrp	string	`yaml:"ticket-default-grp"`
+	CloseResolved		bool	`yaml:"close-resolved,omitempty"`
 	EmailSmtp			string	`yaml:"email-smtp,omitempty"`
 	EmailFrom			string	`yaml:"email-from,omitempty"`
 	GitlabURL			string	`yaml:"gitlab-url,omitempty"`
 	GitlabToken			string	`yaml:"gitlab-token,omitempty"`
-	GitlabProject		string	`yaml:"gitlab-project,omitempty"`
-	HpsmURL				string	`yaml:"hpsm-url,omitempty"`
+	HpsmURL				string	`yaml:"hpsm-base-url,omitempty"`
+	HpsmCreateEp		string	`yaml:"hpsm-create-ep,omitempty"`
+	HpsmUpdateEp		string	`yaml:"hpsm-update-ep,omitempty"`
+	HpsmCloseEp			string	`yaml:"hpsm-close-ep,omitempty"`
 	HpsmUser			string	`yaml:"hpsm-user,omitempty"`
 	HpsmPass			string	`yaml:"hpsm-pass,omitempty"`
 	MockURL				string	`yaml:"mock-ticket-url,omitempty"`

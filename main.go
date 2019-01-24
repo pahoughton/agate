@@ -46,11 +46,10 @@ func main() {
 	}
 
 	if *args.Debug {
-		cfg.Debug = true
 		os.Setenv("DEBUG","true")
 	}
 
-	amhandler := amgr.New(cfg)
+	amhandler := amgr.New(cfg,*args.Debug)
 
 	fmt.Println(os.Args[0]," listening on ",cfg.ListenAddr)
 

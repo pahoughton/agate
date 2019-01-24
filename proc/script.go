@@ -12,34 +12,31 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
 
-func (p *Proc)Script(
-	node	string,
-	labels	map[string]string,
-	tsys	string,
-	tid		string) error {
+func (p *Proc)Script(node string, labels pmod.LabelSet) (string, error) {
 
 	lfile, err := ioutil.TempFile("/tmp",node)
 	if err != nil {
-		return fmt.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", fmt.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(lfile.Name())
 
 	lyml, err := yaml.Marshal(labels)
 	if err != nil {
-		return fmt.Errorf("yaml.Marshal - %s\n%v",err,labels)
+		return "", fmt.Errorf("yaml.Marshal - %s\n%v",err,labels)
 	}
 	if _, err := lfile.Write(lyml); err != nil {
-		return fmt.Errorf("Write: %s",err.Error())
+		return "", fmt.Errorf("Write: %s",err.Error())
 	}
 	if err := lfile.Close(); err != nil {
-		return fmt.Errorf("Close: %s",err.Error())
+		return "", fmt.Errorf("Close: %s",err.Error())
 	}
 
-	scriptfn := filepath.Join(p.ScriptsDir,labels["alertname"])
+	scriptfn := filepath.Join(p.ScriptsDir,string(labels["alertname"]))
 
 	cmdargs := []string{node,lfile.Name()}
 
@@ -52,26 +49,23 @@ func (p *Proc)Script(
 	} else {
 		cmdstatus = "success"
 	}
-	if len(tid) > 0 {
-		tcom := fmt.Sprintf("command: %s %v",scriptfn,cmdargs)
-		tcom += "results: " + cmdstatus + "\n"
-		if err != nil {
-			tcom += "cmd error: " + err.Error() + "\n"
-		}
-		tcom += "output:\n" + string(cmdout)
-		if err = p.Ticket.AddComment(tsys,tid,tcom); err != nil {
-			return fmt.Errorf("ticket comment - %s",err.Error())
-		}
+
+	tcom := fmt.Sprintf("command: %s %v",scriptfn,cmdargs)
+	tcom += "results: " + cmdstatus + "\n"
+	if err != nil {
+		tcom += "cmd error: " + err.Error() + "\n"
 	}
+	tcom += "output:\n" + string(cmdout)
+
 	if p.Debug {
 		fmt.Printf("DEBUG: script %v\noutput: %s\n",cmdargs,cmdout)
 	}
 
 	p.ScriptsRun.With(
 		promp.Labels{
-			"script": labels["script"],
+			"script": string(labels["alertname"]),
 			"status": cmdstatus,
 		}).Inc()
 
-	return nil
+	return tcom, err
 }
