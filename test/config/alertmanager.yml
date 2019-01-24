@@ -30,5 +30,5 @@ receivers:
 
   - name: 'agate-no-resolve'
     webhook_configs:
-      - url: 'http://localhost:5001/alerts/no-resolve'
+      - url: 'http://localhost:5001/alerts'
         send_resolved: false

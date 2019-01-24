@@ -1,0 +1,41 @@
+{
+  "receiver":"agate",
+  "status":"resolved",
+  "alerts":[
+    {
+      "status":"resolved",
+      "labels":{
+	"alertname":"disk-usage",
+	"dev":"sda2",
+	"mountpoint":"/opt",
+	"instance":"c7dev.test.nowhere.none:9100"
+      },
+      "annotations":{
+	"title":"disk usage 86% above 85% on /opt",
+	"sop":"https://coreco.opr.statefarm.org/index.php/SOP_-_Linux_-_Disk_-_/dumps",
+	"metric":"node_filesystem_free"
+      },
+      "startsAt":"2019-01-03T10:08:43.54642646-07:00",
+      "endsAt":"2019-01-03T10:18:43.12345678-07:00",
+      "generatorURL":"http://prom0ym.test.statefarm.com:9090/"
+    }
+  ],
+  "groupLabels":{
+    "alertname":"disk-usage",
+    "instance":"c7dev.test.nowhere.none:9100"
+  },
+  "commonLabels":{
+	"alertname":"disk-usage",
+	"dev":"sda2",
+	"mountpoint":"/opt",
+	"instance":"c7dev.test.nowhere.none:9100"
+  },
+  "commonAnnotations":{
+	"title":"disk usage 86% above 85% on /opt",
+	"sop":"https://coreco.opr.statefarm.org/index.php/SOP_-_Linux_-_Disk_-_/dumps",
+	"metric":"node_filesystem_free"
+  },
+  "externalURL":"http://amgr:9093",
+  "version":"4",
+  "groupKey":"{}:{alertname=\"disk-usage\", instance=\"c7dev.test.nowhere.none:9100\"}"
+}
