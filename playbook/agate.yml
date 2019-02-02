@@ -1,7 +1,0 @@
-# 2019-01-01 (cc) <paul4hough@gmail.com>
-#
----
-- name: agate {{ agate_role }} remediation
-  hosts: all
-  roles:
-    - "{{ agate_role }}"
