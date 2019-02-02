@@ -1,36 +1,17 @@
-# This file is a template, and might need editing before it works on your project.
-# see https://docs.gitlab.com/ce/ci/yaml/README.html for all available options
+# 2019-01-30 (cc) <paul4hough@gmail.com>
+#
+---
 
-# you can delete this line if you're not using Docker
-image: registry.sfgitlab.opr.statefarm.org/registry/sf/centos:latest
-
-before_script:
-  - echo "Before script section"
-  - echo "For example you might run an update here or install a build dependency"
-  - echo "Or perhaps you might print out some debugging details"
-   
-after_script:
-  - echo "After script section"
-  - echo "For example you might do some cleanup here"
-   
-build1:
+build:
+  image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
   stage: build
+  artifacts:
+    paths:
+      - agate
   script:
-    - echo "Do your build here"
-   
-test1:
-  stage: test
-  script: 
-    - echo "Do a test here"
-    - echo "For example run a test suite"
-   
-test2:
-  stage: test
-  script: 
-    - echo "Do another parallel test here"
-    - echo "For example run a lint test"
-   
-deploy1:
-  stage: deploy
+    - go build -mod=vendor
+
+yamllint:
+  image: $CI_REGISTRY/coreco-automation/images/yamllint
   script:
-    - echo "Do your deploy here"
+    - yamllint .

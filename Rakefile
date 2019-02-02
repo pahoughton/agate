@@ -13,5 +13,5 @@ task :default do
 end
 
 task :build do
-  sh 'go build'
+  sh 'go build -mod=vendor'
 end
