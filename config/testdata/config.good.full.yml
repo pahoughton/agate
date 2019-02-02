@@ -1,20 +1,20 @@
 # 2019-01-07 (cc) <paul4hough@gmail.com>
 #
 ---
-listen-addr:        ":9201"
-base-dir:           /var/lib/agate
-max-days:           15
+listen-addr: ":9201"
+base-dir: /var/lib/agate
+max-days: 15
 ticket-default-sys: gitlab
 ticket-default-grp: user/project
-close-resolved:     true
-email-smtp:         localhost:25
-email-from:         no-reply-agate@nowhere.none
-gitlab-url:         https://gitlab.com/api/v4
-gitlab-token:       secret-token
-hpsm-base-url:      https://hpsm/api/v3
-hpsm-create-ep:     incident2
-hpsm-update-ep:     incident2
-hpsm-close-ep:      incident3
-hpsm-user:          hpsm
-hpsm-pass:          pass
-mock-ticket-url:    http://localhost:9202/ticket
+close-resolved: true
+email-smtp: localhost:25
+email-from: no-reply-agate@nowhere.none
+gitlab-url: https://gitlab.com/api/v4
+gitlab-token: secret-token
+hpsm-base-url: https://hpsm/api/v3
+hpsm-create-ep: incident2
+hpsm-update-ep: incident2
+hpsm-close-ep: incident3
+hpsm-user: hpsm
+hpsm-pass: pass
+mock-ticket-url: http://localhost:9202/ticket

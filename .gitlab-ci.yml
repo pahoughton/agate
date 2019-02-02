@@ -16,4 +16,4 @@ build:
 yamllint:
   image: $CI_REGISTRY/coreco-automation/images/yamllint
   script:
-    - yamllint .
+    - yamllint .gitlab-ci.yml test config
