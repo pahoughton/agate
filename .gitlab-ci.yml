@@ -1,6 +1,8 @@
 # 2019-01-30 (cc) <paul4hough@gmail.com>
 #
 ---
+variables:
+  GOCACHE: /tmp/go-cache
 
 build:
   image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
