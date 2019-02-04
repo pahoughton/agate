@@ -20,4 +20,4 @@ hpsm-update-ep: B2E/IncidentManagement_v2_0
 hpsm-close-ep: B2E/IncidentManagementV3
 hpsm-user: ip_soft_int
 hpsm-pass: <secret>
-mock-ticket-url: http://localhost:9202/ticket
+ mock-ticket-url: http://localhost:9202/ticket
