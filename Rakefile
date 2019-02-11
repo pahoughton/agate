@@ -23,3 +23,8 @@ end
 task :build do
   sh 'go build -mod=vendor'
 end
+
+task :build_static do
+  sh 'go build -mod=vendor ' + \
+     '-tags netgo -ldflags \'-w -extldflags "-static"\''
+end
