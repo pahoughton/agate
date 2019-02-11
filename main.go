@@ -50,9 +50,9 @@ func main() {
 
 	args := CommandArgs{
 		ConfigFn:	app.Flag("config-file","config filename").
-			Default("agate.yml").ExistingFile(),
+			Default("agate.yml").String(),
 		DataDir:	app.Flag("data-dir","data directory").
-			Default("/opt/agate/data").ExistingDir(),
+			Default("/opt/agate/data").String(),
 		Debug:		app.Flag("debug","debug output to stdout").Bool(),
 	}
 
