@@ -13,9 +13,12 @@ task :default do
 end
 
 task :yamllint do
-  sh "yamllint -f parsable .gitlab-ci.yml test config"
+  sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
 end
 
+task :test => [:yamllint] do
+  sh 'cd config && go test -mod=vendor'
+end
 
 task :build do
   sh 'go build -mod=vendor'
