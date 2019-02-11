@@ -1,0 +1,19 @@
+# .travis.yml - 2019-02-11
+#
+# (cc) <paul4hough@gmail.com>
+
+language: go
+notifications:
+  email:
+    - paul4hough@gmail.com
+
+go:
+  - 1.11.x
+
+before_script:
+  - uname -a
+  - env
+
+script:
+  - cd config && go test -mod=vendor
+  - go build -mod=vendor
