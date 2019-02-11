@@ -4,48 +4,39 @@
 package gitlab
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/pahoughton/agate/model"
 
 	gl "github.com/xanzy/go-gitlab"
 )
 
 type Gitlab struct {
-	Debug		bool
-	defaultPrj	string
+	debug		bool
 	c			*gl.Client
 }
 
-func New(url string, token string, dprj string) *Gitlab {
+func New(url string, token string, dbg bool) *Gitlab {
 	g := &Gitlab{
-		defaultPrj: dprj,
+		debug:		dbg,
 		c:			gl.NewClient(nil, token),
 	}
 	g.c.SetBaseURL(url)
 	return g
 }
 
-func (g *Gitlab)CreateIssue(
-	prj		string,
-	title	string,
-	desc	string) (string, error) {
+func (g *Gitlab)Create(prj string, a model.Alert) (string, error) {
 
-	if len(prj) < 1 {
-		if len(g.defaultPrj) < 1 {
-			return "", errors.New("no gitlab project")
-		}
-		prj = g.defaultPrj
-	}
 	i, resp, err := g.c.Issues.CreateIssue(prj,&gl.CreateIssueOptions{
-		Title: gl.String(title),
-		Description: gl.String("```\n"+desc+"\n```\n"),
+		Title: gl.String(a.Title()),
+		Description: gl.String("```\n"+a.Desc()+"\n```\n"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("gl.CreateIssue: %s\nresp:\n%v",err,resp)
 	}
-	if g.Debug {
+	if g.debug {
 		fmt.Printf("gitlab.CreateIssue: ret issue: %v\n",i)
 	}
 	return fmt.Sprintf("%s:%d",prj,i.IID), nil
@@ -59,7 +50,7 @@ func (g *Gitlab)AddComment(tid string, cmt string) error {
 	if err != nil {
 		return fmt.Errorf("atoi: %s - %s",tida[1],err)
 	}
-	if g.Debug {
+	if g.debug {
 		fmt.Printf("gitlab.AddComment: tid '%s' tida '%v' tida0 '%s' tida1 '%s' prj '%s' issue '%d'\n",
 			tid,
 			tida,
@@ -81,7 +72,11 @@ func (g *Gitlab)AddComment(tid string, cmt string) error {
 	return nil
 }
 
-func (g *Gitlab)Close(tid string) error {
+func (g *Gitlab)Close(tid, cmt string) error {
+
+	if len(cmt) > 0 {
+		g.AddComment(tid,cmt)
+	}
 
 	tida := strings.Split(tid,":")
 	prj := tida[0]

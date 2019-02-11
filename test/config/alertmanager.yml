@@ -16,7 +16,7 @@ route:
   routes:
     - receiver: 'agate-no-resolve'
       match_re:
-         no_resolve: .*
+        no_resolve: .*
       group_by:
         - alertname
       group_wait: 10s
@@ -30,5 +30,5 @@ receivers:
 
   - name: 'agate-no-resolve'
     webhook_configs:
-      - url: 'http://localhost:5001/alerts/no-resolve'
+      - url: 'http://localhost:5001/alerts'
         send_resolved: false

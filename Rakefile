@@ -12,6 +12,11 @@ task :default do
   exit 1
 end
 
+task :yamllint do
+  sh "yamllint -f parsable .gitlab-ci.yml test config"
+end
+
+
 task :build do
-  sh 'go build'
+  sh 'go build -mod=vendor'
 end

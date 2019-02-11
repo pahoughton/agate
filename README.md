@@ -29,24 +29,9 @@ alert groups.
 
 Prometheus metrics are available via http://hostname:port/metrics,
 
-### config file
+### configuration
 
-```yaml
-listen-addr: ":1234"
-ticket-default-sys: gitlab
-ticket-default-grp: project
-debug: true
-base-dir: /var/lib/agate
-max-days: 15
-email-smtp: host:25
-email-from: no-reply-agate@nowhere.non
-gitlab-url: https://gitlab.com/api/v4
-gitlab-token: secret-token
-hpsm-url: https://hpsm/apiv3
-hpsm-user: hpsm
-hpsm-pass: pass
-mock-ticket-url: http://localhost:5003/ticket
-```
+See [config.good.full.yml](../master/config/testdata/config.good.full.yml)
 
 ### annotations
 

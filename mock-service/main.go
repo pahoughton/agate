@@ -24,6 +24,9 @@ func handleAny(
 	}
 	defer r.Body.Close()
 	fmt.Printf("URL: %v\n",r.URL)
+	for k,v := range r.Header {
+		fmt.Printf("HDR %s: %v\n",k,v)
+	}
 	fmt.Println(string(b))
 }
 

@@ -5,7 +5,6 @@ package proc
 
 import (
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/ticket"
 
 	promp "github.com/prometheus/client_golang/prometheus"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
@@ -13,17 +12,15 @@ import (
 
 type Proc struct {
 	Debug			bool
-	Ticket			*ticket.Ticket
 	PlaybookDir		string
 	ScriptsDir		string
 	AnsiblePlays	*promp.CounterVec
 	ScriptsRun		*promp.CounterVec
 }
 
-func New(c *config.Config, t *ticket.Ticket) *Proc {
+func New(c *config.Config, dbg bool) *Proc {
 	p := &Proc{
-		Debug:			c.Debug,
-		Ticket:			t,
+		Debug:			dbg,
 		PlaybookDir:	c.PlaybookDir,
 		ScriptsDir:		c.ScriptsDir,
 		AnsiblePlays: proma.NewCounterVec(

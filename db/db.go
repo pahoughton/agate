@@ -38,7 +38,7 @@ func Open(dir string, mode os.FileMode, maxDays uint ) (*AlertDB, error) {
 
 	bdb, err := bolt.Open(dbfn, mode, opts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open %s %v - %v",dbfn,mode,err)
 	}
 	adb := &AlertDB{db: bdb, maxDays: int(maxDays)}
 

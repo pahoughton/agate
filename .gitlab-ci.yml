@@ -1,0 +1,19 @@
+# 2019-01-30 (cc) <paul4hough@gmail.com>
+#
+---
+variables:
+  GOCACHE: /tmp/go-cache
+
+build:
+  image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
+  stage: build
+  artifacts:
+    paths:
+      - agate
+  script:
+    - go build -mod=vendor
+
+yamllint:
+  image: $CI_REGISTRY/coreco-automation/images/yamllint
+  script:
+    - yamllint .gitlab-ci.yml test config
