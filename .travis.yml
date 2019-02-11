@@ -15,5 +15,5 @@ before_script:
   - env
 
 script:
-  - cd config && go test -mod=vendor
-  - go build -mod=vendor
+  - cd config && go test
+  - go build
