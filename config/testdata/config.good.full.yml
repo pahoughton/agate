@@ -7,8 +7,8 @@ max-days: 15
 ticket-default-sys: gitlab
 ticket-default-grp: user/project
 close-resolved: true
-email-smtp: localhost:25
-email-from: no-reply-agate@nowhere.none
+# email-smtp: localhost:25
+# email-from: no-reply-agate@nowhere.none
 gitlab-url: https://gitlab.com/api/v4
 gitlab-token: secret-token
 hpsm-base-url: https://hpsm/api/v3

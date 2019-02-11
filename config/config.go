@@ -18,8 +18,8 @@ type Config struct {
 	TicketDefaultSys	string	`yaml:"ticket-default-sys"`
 	TicketDefaultGrp	string	`yaml:"ticket-default-grp"`
 	CloseResolved		bool	`yaml:"close-resolved,omitempty"`
-	EmailSmtp			string	`yaml:"email-smtp,omitempty"`
-	EmailFrom			string	`yaml:"email-from,omitempty"`
+	// EmailSmtp			string	`yaml:"email-smtp,omitempty"`
+	// EmailFrom			string	`yaml:"email-from,omitempty"`
 	GitlabURL			string	`yaml:"gitlab-url,omitempty"`
 	GitlabToken			string	`yaml:"gitlab-token,omitempty"`
 	HpsmURL				string	`yaml:"hpsm-base-url,omitempty"`
