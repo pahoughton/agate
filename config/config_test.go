@@ -4,15 +4,9 @@
 package config
 
 import (
-	"encoding/json"
-	"net/url"
-	"reflect"
-	"regexp"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,22 +14,25 @@ func TestLoadFull(t *testing.T) {
 
 	var cfgExp = Config{
 		ListenAddr:			":9201",
-		BaseDir:			"/var/lib/agate",
+		BaseDir:			"/tmp/opt/agate",
 		MaxDays:			15,
 		TicketDefaultSys:	"gitlab",
 		TicketDefaultGrp:	"user/project",
 		CloseResolved:		true,
 		EmailSmtp:			"localhost:25",
 		EmailFrom:			"no-reply-agate@nowhere.none",
-		GitlabUrl:			"https://gitlab.com/api/v4",
+		GitlabURL:			"https://gitlab.com/api/v4",
 		GitlabToken:		"secret-token",
-		HpsmUrl:			"https://hpsm/api/v3",
+		HpsmURL:			"https://hpsm/api/v3",
+		HpsmCreateEp:		"incident2",
+		HpsmUpdateEp:		"incident2",
+		HpsmCloseEp:		"incident3",
 		HpsmUser:			"hpsm",
 		HpsmPass:			"pass",
 		MockURL:			"http://localhost:9202/ticket",
-		DataDir:			"/var/lib/agate/data"
-		PlaybookDir:		"/var/lib/agate/playbook"
-		ScriptsDir:			"/var/lib/agate/scripts"
+		DataDir:			"/tmp/opt/agate/data",
+		PlaybookDir:		"/tmp/opt/agate/playbook",
+		ScriptsDir:			"/tmp/opt/agate/scripts",
 	}
 
 	cfgfn := "testdata/config.good.full.yml"
@@ -64,4 +61,5 @@ func TestLoadFull(t *testing.T) {
 				gv,expLines[i],gotYml,expYml)
 		}
 	}
+
 }
