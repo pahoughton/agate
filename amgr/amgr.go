@@ -43,9 +43,9 @@ type Handler struct {
 	Errors				promp.Counter
 }
 
-func New(c *config.Config, dbg bool) *Handler {
+func New(c *config.Config,dataDir string,dbg bool) *Handler {
 
-	adb, err := db.Open(path.Join(c.BaseDir, "data"), 0664, c.MaxDays);
+	adb, err := db.Open(dataDir, 0664, c.MaxDays);
 	if err != nil {
 		fmt.Println("FATAL: open db - ",err.Error())
 		os.Exit(1)

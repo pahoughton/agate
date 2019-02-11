@@ -27,6 +27,7 @@
   with_items:
     - "{{ remed_dir }}/bin"
     - "{{ remed_dir }}/config"
+    - "{{ remed_dir }}/data"
     - "{{ remed_dir }}/playbook"
     - "{{ remed_dir }}/playbook/roles"
     - "{{ remed_dir }}/scripts"

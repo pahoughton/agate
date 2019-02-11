@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
+	"runtime"
 
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/amgr"
@@ -17,22 +18,42 @@ import (
 	promh "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var (
+	Version	  string
+	Revision  string
+	Branch    string
+	BuildUser string
+	BuildDate string
+	GoVersion = runtime.Version()
+)
+
 type CommandArgs struct {
 	ConfigFn	*string
+	DataDir		*string
 	Debug		*bool
 }
 
 func main() {
+	version := fmt.Sprintf(`%s: version %s branch: %s, rev: %s
+  build: %s %s
+`,
+		path.Base(os.Args[0]),
+		Version,
+		Branch,
+		Revision,
+		BuildDate,
+		GoVersion)
 
-	app := kingpin.New(filepath.Base(os.Args[0]),
+	app := kingpin.New(path.Base(os.Args[0]),
 		"prometheus alertmanager webhook processor").
-			Version("0.1.1")
+			Version(version)
 
 	args := CommandArgs{
-		ConfigFn: app.Flag("config-fn","config filename").
-			Default("agate.yml").String(),
-		Debug:		app.Flag("debug","debug output to stdout").
-			Default("true").Bool(),
+		ConfigFn:	app.Flag("config-file","config filename").
+			Default("agate.yml").ExistingFile(),
+		DataDir:	app.Flag("data-dir","data directory").
+			Default("/opt/agate/data").ExistingDir(),
+		Debug:		app.Flag("debug","debug output to stdout").Bool(),
 	}
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -49,7 +70,7 @@ func main() {
 		os.Setenv("DEBUG","true")
 	}
 
-	amhandler := amgr.New(cfg,*args.Debug)
+	amhandler := amgr.New(cfg,*args.DataDir,*args.Debug)
 
 	fmt.Println(os.Args[0]," listening on ",cfg.ListenAddr)
 

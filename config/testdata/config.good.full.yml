@@ -2,10 +2,11 @@
 #
 ---
 listen-addr: ":9201"
-base-dir: /tmp/opt/agate
-max-days: 15
 ticket-default-sys: gitlab
 ticket-default-grp: user/project
+scripts-dir: /etc/agate-scripts
+playbook-dir: /etc/agate-playbook
+max-days: 15
 close-resolved: true
 # email-smtp: localhost:25
 # email-from: no-reply-agate@nowhere.none

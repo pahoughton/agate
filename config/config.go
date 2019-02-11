@@ -4,19 +4,18 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
 	ListenAddr			string	`yaml:"listen-addr"`
-	BaseDir				string	`yaml:"base-dir,omitempty"`
-	MaxDays				uint	`yaml:"max-days,omitempty"`
 	TicketDefaultSys	string	`yaml:"ticket-default-sys"`
 	TicketDefaultGrp	string	`yaml:"ticket-default-grp"`
+	CfgScriptsDir		string	`yaml:"scripts-dir,omitempty"`
+	CfgPlaybookDir		string	`yaml:"playbook-dir,omitempty"`
+	MaxDays				uint	`yaml:"max-days,omitempty"`
 	CloseResolved		bool	`yaml:"close-resolved,omitempty"`
 	// EmailSmtp			string	`yaml:"email-smtp,omitempty"`
 	// EmailFrom			string	`yaml:"email-from,omitempty"`
@@ -30,9 +29,8 @@ type Config struct {
 	HpsmPass			string	`yaml:"hpsm-pass,omitempty"`
 	MockURL				string	`yaml:"mock-ticket-url,omitempty"`
 	// derived
-	DataDir				string
-	PlaybookDir			string
 	ScriptsDir			string
+	PlaybookDir			string
 }
 
 func LoadFile(fn string) (*Config, error) {
@@ -45,24 +43,23 @@ func LoadFile(fn string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(cfg.BaseDir) < 1 {
-		cfg.BaseDir = "/var/lib/agate"
-	}
+	baseDir := path.Dir(fn)
 
-	cfg.DataDir = path.Join(cfg.BaseDir,"data")
-	if err = os.MkdirAll(cfg.DataDir,0775); err != nil {
-		return nil, fmt.Errorf("FATAL: %s - %s",cfg.DataDir,err.Error())
+	if len(cfg.CfgPlaybookDir) > 0 {
+		cfg.PlaybookDir = cfg.CfgPlaybookDir
+	} else {
+		cfg.PlaybookDir = "playbook"
 	}
-
-	cfg.PlaybookDir = path.Join(cfg.BaseDir,"playbook")
-	rDir := path.Join(cfg.PlaybookDir,"roles")
-	if err = os.MkdirAll(rDir,0775); err != nil {
-		return nil, fmt.Errorf("FATAL: %s - %s",rDir,err.Error())
+	if ! path.IsAbs(cfg.PlaybookDir) {
+		cfg.PlaybookDir = path.Join(baseDir,cfg.PlaybookDir)
 	}
-
-	cfg.ScriptsDir = path.Join(cfg.BaseDir,"scripts")
-	if err = os.MkdirAll(cfg.ScriptsDir,0775); err != nil {
-		return nil, fmt.Errorf("FATAL: %s - %s",cfg.ScriptsDir,err.Error())
+	if len(cfg.CfgScriptsDir) > 0 {
+		cfg.ScriptsDir = cfg.CfgScriptsDir
+	} else {
+		cfg.ScriptsDir = "scripts"
+	}
+	if ! path.IsAbs(cfg.ScriptsDir) {
+		cfg.ScriptsDir = path.Join(baseDir,cfg.ScriptsDir)
 	}
 
 	return cfg, nil

@@ -14,10 +14,11 @@ func TestLoadFull(t *testing.T) {
 
 	var cfgExp = Config{
 		ListenAddr:			":9201",
-		BaseDir:			"/tmp/opt/agate",
-		MaxDays:			15,
 		TicketDefaultSys:	"gitlab",
 		TicketDefaultGrp:	"user/project",
+		CfgScriptsDir:		"/etc/agate-scripts",
+		CfgPlaybookDir:		"/etc/agate-playbook",
+		MaxDays:			15,
 		CloseResolved:		true,
 		// EmailSmtp:			"localhost:25",
 		// EmailFrom:			"no-reply-agate@nowhere.none",
@@ -30,12 +31,50 @@ func TestLoadFull(t *testing.T) {
 		HpsmUser:			"hpsm",
 		HpsmPass:			"pass",
 		MockURL:			"http://localhost:9202/ticket",
-		DataDir:			"/tmp/opt/agate/data",
-		PlaybookDir:		"/tmp/opt/agate/playbook",
-		ScriptsDir:			"/tmp/opt/agate/scripts",
+		ScriptsDir:			"/etc/agate-scripts",
+		PlaybookDir:		"/etc/agate-playbook",
 	}
 
 	cfgfn := "testdata/config.good.full.yml"
+
+	cfgGot, err := LoadFile(cfgfn)
+
+	if err != nil {
+		t.Errorf("LoadFile %s: %s",cfgfn,err)
+	}
+
+	gotYml, err := yaml.Marshal(cfgGot)
+	if err != nil {
+		t.Fatalf("yaml.Marshal: %s",err)
+	}
+
+	expYml, err := yaml.Marshal(cfgExp)
+	if err != nil {
+		t.Fatalf("yaml.Marshal: %s",err)
+	}
+	gotLines := strings.Split(string(gotYml), "\n")
+	expLines := strings.Split(string(expYml),"\n")
+
+	for i, gv := range gotLines {
+		if gv != expLines[i] {
+			t.Fatalf("\n%s !=\n%s\nGOT:\n%s\nEXP:\n%s\n",
+				gv,expLines[i],gotYml,expYml)
+		}
+	}
+
+}
+
+func TestLoadMin(t *testing.T) {
+
+	var cfgExp = Config{
+		ListenAddr:			":9201",
+		TicketDefaultSys:	"gitlab",
+		TicketDefaultGrp:	"user/project",
+		ScriptsDir:			"testdata/scripts",
+		PlaybookDir:		"testdata/playbook",
+	}
+
+	cfgfn := "testdata/config.good.min.yml"
 
 	cfgGot, err := LoadFile(cfgfn)
 

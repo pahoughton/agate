@@ -1,7 +1,7 @@
 # 2018-12-23 (cc) <paul4hough@gmail.com>
 #
 ---
-- name: prometheus node
+- name: agate test node
   hosts: agate
   tasks:
     - import_tasks: tasks-base.yml

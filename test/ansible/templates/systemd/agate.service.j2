@@ -8,7 +8,8 @@ After=network-online.target
 [Service]
 User={{ remed_user }}
 ExecStart={{ remed_dir }}/bin/agate \
-	     --config-fn={{ remed_dir }}/config/agate.yml \
+	     --config-file={{ remed_dir }}/config/agate.yml \
+	     --data-dir={{ remed_dir }}/data \
 	     --debug
 
 [Install]

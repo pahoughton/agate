@@ -1,6 +1,5 @@
-# .travis.yml - 2019-02-11
-#
-# (cc) <paul4hough@gmail.com>
+# 2019-02-11 (cc) <paul4hough@gmail.com>
+---
 
 language: go
 notifications:
@@ -15,5 +14,4 @@ before_script:
   - env
 
 script:
-  - cd config && go test
-  - go build
+  - rake test build
