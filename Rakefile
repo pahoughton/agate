@@ -81,3 +81,9 @@ task :release => [:test, :build_static] do
   sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
   sh "tar tzf agate-#{version}.amd64.tar.gz"
 end
+
+task :travis do
+  sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
+  sh 'cd config && go test'
+  sh 'go build'
+end

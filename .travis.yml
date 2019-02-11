@@ -14,4 +14,4 @@ before_script:
   - env
 
 script:
-  - rake test build
+  - rake travis
