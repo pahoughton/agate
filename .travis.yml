@@ -12,7 +12,7 @@ go:
 before_script:
   - uname -a
   - env
-  - pip install -u yamllint
+  - sudo pip install yamllint
 
 script:
   - rake travis
