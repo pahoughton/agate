@@ -1,6 +1,6 @@
 # 2019-02-11 (cc) <paul4hough@gmail.com>
 ---
-
+dist: xenial
 language: go
 notifications:
   email:
@@ -12,7 +12,7 @@ go:
 before_script:
   - uname -a
   - env
-  - pip install yamllint
+  - pip install -u yamllint
 
 script:
   - rake travis
