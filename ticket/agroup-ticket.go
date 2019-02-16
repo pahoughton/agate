@@ -40,7 +40,7 @@ func (t *Ticket)AGroupCreate(
 	if remed {
 		remedStr = "\nRemediation Pending\n"
 	} else {
-		remedStr = "\nNO remediation available\n" + agrp.Desc()
+		remedStr = "\nNO remediation available\n"
 	}
 	if gcnt == 1 {
 		title = agrp.Alerts[0].Title()
@@ -51,10 +51,9 @@ func (t *Ticket)AGroupCreate(
 	}
 
 	tid,err := t.ActionCreate(sys,tgrp,title,desc)
-	atid := &db.AlertTid{
-		Tid: tid,
-		Tqid: 0,
-	}
+
+	atid := &db.AlertTid{}
+
 	if err != nil {
 		atid.Tqid = = t.db.TicketQueueCreate(sys,tgrp,title,desc)
 	}
@@ -66,4 +65,12 @@ func (t *Ticket)AGroupCreate(
 	return atid
 }
 
-func (t *Ticket) AGroupAppendAlert(atid *db.AlertTid, a *alert.Alert,
+func (t *Ticket) AGroupAppendAlert(
+	atid *db.AlertTid, a *alert.Alert,remed bool) {
+
+	if cfg.NewTicketOnAdded {
+
+	} else {
+
+	}
+}
