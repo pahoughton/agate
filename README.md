@@ -33,29 +33,27 @@ Prometheus metrics are available via http://hostname:port/metrics,
 
 See [config.good.full.yml](../master/config/testdata/config.good.full.yml)
 
-### annotations
+### labels
 
-* ticket: gitlab|mock
+for use by alertmanager alert grouping
 
- * ticketing system
-
-* ticket_group:
+* agate_ticket_group:
 
  * gitlab - project for issue creation
  * hpsm - incident workgroup
+ * alertmanager - receiver
  * email - email to address
 
-* subject: name
+### annotations
 
- * ticket title (secondary)
-
-* title: name
-
- * ticket title (primary)
-
-* close_resolved: bool
-
- * close ticket when resolved
+* agate_ticket_sys: gitlab|mock|hpsm|alertmanager
+  * default set by config
+* agate_group_title: alert group title
+  * default: multiple alerts for $agate_ticket_group
+* agate_title: alert level title
+  * default: $alertname firing on $instance
+* agate_close_resolved
+* default: true
 
 ## features
 

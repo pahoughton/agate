@@ -1,149 +1,139 @@
 /* 2019-02-14 (cc) <paul4hough@gmail.com>
-   FIXME what is this for?
+
+Single AlertGroup Queue Manager Thread
 */
 package amgr
 
-func (a *Amgr)Manager() {
+func (am *Amgr)Manager() {
 
 	for {
-		// wait for next alert, double check queue every 10 min
-		select {
-		case recvd := <- h.manager:
-		case <- time.After(10 * time.Minute):
+		// grab array of queue keys
+		agq := a.db.AGroupQueue()
+		if len(agq) < 1 {
+			// wait for next alert, double check queue every 10 min
+			select {
+			case <- h.manager:
+			case <- time.After(10 * time.Minute):
+			}
+			agq = a.db.AGroupQueue()
 		}
 
-		for {
-			agrcv := a.db.AGroupNext()
-			if id == nil {
-				break
-			}
-			// fixme - one at a time - need rate limiter
-			a.ProcAlertGroup(agrcv)
+		for _, agqkey := range agq {
+			am.procq <- agkey
+			go ProcAlertGroup(agqkey)
 		}
 	}
 }
 
-type RemedAlert struct {
-	alert	*model.Alert
+type NewAlert struct {
+	agidx	int
 	remed	bool
 }
 
-func (am *Amgr)ProcAlertGroup(agrcv *db.AGroupRcvd) {
+func (am *Amgr)ProcAlertGroup(agqkey uint64) {
 
+	defer func() {
+		<- am.procq
+	}
+	agq := a.db.AGroupGet(agqkey)
+	if agq == nil {
+		return
+	}
 	if a.debug {
 		var dbgbuf bytes.Buffer
-		if err := json.Indent(&dbgbuf, agrcv.Json, "", "  "); err != nil {
+		if err := json.Indent(&dbgbuf, agq.Json, "", "  "); err != nil {
 			fmt.Printf("DEBUG json.Indent: ",err.Error())
 		} else {
 			fmt.Println("DEBUG agrp\n",dbgbuf.String())
 		}
 	}
 
-	var agrp model.AlertGroup
-	if err := json.Unmarshal(ag.Json, &agrp); err != nil {
+	var agrp alert.AlertGroup
+	if err := json.Unmarshal(agq.Json, &agrp); err != nil {
 		panic(fmt.Sprintf(
 			"json.Unmarshal agrp: %s\n%v",err.Error(),agrcv.Json))
 	}
-
+	if len(agrp.Alerts) < 1 {
+		am.Error("0 alerts in alertgroup")
+		a.db.AGroupDelete(agqkey)
+		return
+	}
 	var gtid *db.AlertTicket
 
-	if agrp.Status == 'firing' {
+	newAlerts := make([]NewAlert,0,len(agrp.Alerts))
+	resolvedAlerts := make([]int,0,len(agrp.Alerts))
+	anyRemed := false
 
-		ticketAlerts := make([]RemedAlert)
-		remedAlerts := make([]Alert)
+	for agidx, a := range agrp.Alerts {
 
-		for _, a := range agrp.Alerts {
+		atid := am.db.AlertTicketGet(a.StartsAt, a.Key())
+		if atid != nil {
+			gtid = atid
+		}
+		if a.Status == 'firing' {
+			if atid != nil {
+				continue
+			}
+			aname := a.Name()
+			resolve := "false"
+			if ag.Resolve {
+				resolve = "true"
+			}
+			am.metrics.AlertsFiring.With(
+				promp.Labels{
+					"name": aname,
+					"node": a.Node(),
+					"resolve": resolve
+				}).Inc()
 
-			if a.Status == 'firing' {
-
-				atid := am.db.TicketGet(a.StartsAt, a.Key())
-				if len(atid) > 0 {
-					gtid = atid
+			remed := false
+			if aname == "unknown" {
+				am.Error("alert missing alertname")
+			} else {
+				sfn := path.Join(h.proc.ScriptsDir,aname)
+				finfo, err = os.Stat(sfn)
+				if err == nil && (finfo.Mode() & 0111) != 0 {
+					remed = true
 				} else {
-					aname = a.Name()
-					if agrcv.Resolve {
-						am.metrics.AlertsFiring.With(
-							promp.Labels{
-								"name": aname,
-								"node": a.Node(),
-								"resolve": "true",
-							}).Inc()
-					} else {
-						am.metrics.AlertsFiring.With(
-							promp.Labels{
-								"name": aname,
-								"node": a.Node(),
-								"resolve": "false",
-							}).Inc()
+					ardir := path.Join(h.proc.PlaybookDir,"roles",aname)
+					finfo, err := os.Stat(ardir)
+					if err == nil && finfo.IsDir() {
+						remed = true
 					}
-					remed := false
-					if aname == "unknown" {
-						am.Error("alert missing alertname")
-					} else if a.Node() != "unknown" {
-						sfn := path.Join(h.proc.ScriptsDir,aname)
-						finfo, err = os.Stat(sfn)
-						if err == nil && (finfo.Mode() & 0111) != 0 {
-							remedAlerts = append(remedAlerts, a)
-							remed = true
-						} else {
-							ardir := path.Join(
-								h.proc.PlaybookDir,"roles",aname)
-							finfo, err := os.Stat(ardir)
-							if err == nil && finfo.IsDir() {
-								remedAlerts = append(remedAlerts, a)
-								remed = true
-							}
-						}
-					}
-					ra := &RemedAlert{
-						alert: a,
-						remed: remed,
-					}
-					ticketAlerts = append(ticketAlerts,ra)
 				}
 			}
-		}
-		if gtid != nil {
-			for _, a := range ticketAlerts {
-				am.ticket.Append(gtid,ra.alert,ra.remed)
-				if agrcv.Resolve {
-					am.db.TicketAdd(a.StartsAt,a.Key(),gtid)
-				}
+			anyRemed ||= remed
+			newAlerts = append(newAlerts,
+				&NewAlert{
+					agidx: agidx,
+					remed: remed,
+				})
+		} else if a.Status == 'resolved' {
+			if atid != nil {
+				resolvedAlerts = append(resolvedAlerts,agidx)
 			}
 		} else {
-			gtid = am.ticket.Create(agrp,len(remedAlerts) > 0)
-			if agrcv.Resolve {
-				for _, a := range agrp.Alerts {
-					am.db.TicketAdd(a.StartsAt,a.Key(),gtid)
-				}
-			}
-		}
-		for _, a := range remedAlerts {
-			am.Remediate(a,gtid,len(agrp.Alerts) > 1)
-		}
-	} else {
-		resolved := true
-
-		for _, a := range agrp.Alerts {
-			if a.Status == 'firing' {
-				resolved = false
-				continue
-			} else {
-				aKey := a.Key()
-				gtid = am.db.TicketGet(a.StartsAt,aKey)
-				if gtid != nil {
-					am.metrics.AlertsResolved.With(
-						promp.Labels{
-							"name": a.Name(),
-							"node": a.Node(),
-						}).Inc()
-					am.ticket.Resolved(a,tid)
-					am.db.TicketDel(a.StartsAt,aKey)
-				}
-			}
-		}
-		if resolved && gtid != nil {
-			am.ticket.Close(gtid)
+			am.Error("unknown status: " + a.Status " "+ a.Title())
 		}
 	}
+
+	if gtid == nil {
+		gtid = am.ticket.AGroupCreate(agrp,agq.resolv,anyRemed)
+	} else {
+		for _, a := range newAlerts {
+			am.ticket.AGroupAppendAlert(gtid,agrp[a.agidx],a.remed)
+		}
+	}
+	for _, a := range newAlerts {
+		if a.remed {
+			am.ticket.AGroupAppend(
+				gtid,
+				agrp[a.agidx],
+				am.Remediate(agrp[a.agidx]))
+		}
+	}
+	for _, agidx := range resolvedAlerts {
+		am.ticket.AGroupResolved(agrp[agidx])
+	}
+	a.db.AGroupDelete(agqkey)
 }

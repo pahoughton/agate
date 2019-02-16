@@ -25,6 +25,8 @@ type Ticket struct {
 	TicketsGend	*promp.CounterVec
 }
 
+FIXME - ticket queue
+
 func New(c *config.Config, dbg bool) *Ticket {
 
 	t := &Ticket{
@@ -57,7 +59,7 @@ func New(c *config.Config, dbg bool) *Ticket {
 }
 
 func (t *Ticket) Sys(a model.Alert) string {
-	sys := string(a.Annotations["ticket"])
+	sys := string(a.Annotations["ticket_sys"])
 	if len(sys) < 1 {
 		sys = t.DefaultSys
 	}

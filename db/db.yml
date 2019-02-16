@@ -1,0 +1,61 @@
+# 2019-02-16 (cc) <paul4hough@gmail.com>
+#
+---
+db:
+  agrp-queue:
+    desc: queue of received alert group json
+    key: seq
+    value:
+      - json
+      - will-resolve
+
+  alert-ticket:
+    desc: alert to ticket binding
+    key:
+      - alert.start
+      - alert.fingerprint
+    value:
+      - ticket-queue.key
+
+  ticket-queue:
+    desc: alert group tickets
+    key: seq
+    value:
+      - tsys
+      - tid
+      - alert-counter
+      - ticket-bucket:
+          desc: ticket updates
+          key: seq
+          value:
+            - action
+            - payload
+
+flow:
+  create:
+    - create ticket-queue
+    - create alert-tickets
+    - update counter
+    - tsys-create:
+        success: update tq-tid
+        fail:
+          - add action & payload to bucket
+          - notify ticket queue mgr
+  appendAlert:
+    - create alert-ticket
+    - update counter
+    - fetch ticket-bucket:
+        content:
+          - add action & payload to bucket
+          - notify ticket queue mgr
+        empty:
+          - attempt tsys-update:
+              success: happyness
+              fail: add action & payload to bucket
+
+  append:
+    - fetch ticket-bucket ....
+  resolve:
+    - delete alert-ticket
+    - update count
+    - fetch ticket-bucket ....
