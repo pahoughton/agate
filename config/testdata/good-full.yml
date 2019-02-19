@@ -1,0 +1,35 @@
+# 2019-01-07 (cc) <paul4hough@gmail.com>
+#
+---
+global:
+  listen: 127.0.0.1:4464
+  data-age: 30
+  scripts-dir: /sdiff
+  playbook-dir: /pdiff
+  scriptsdir: /sdiff
+  playbookdir: /pdiff
+email:
+  smtp: localhost:25
+  from: agate@nowhere
+  to: invalid
+ticket-sys:
+  default: gitlab
+  close-resolved: true
+  systems:
+    gitlab:
+      url: https://mylab
+      repo: paul
+      token: secret-sauce
+    hpsm:
+      url: https://myhpsm/api
+      user: paul
+      pass: secret-sauce
+      create-ep: create
+      update-ep: update
+      close-ep: close
+      workgroup: team
+      defaults:
+        assignee: you
+        urgency: now
+    mock:
+      url: http://cbed:1234/abc

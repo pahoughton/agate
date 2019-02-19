@@ -4,101 +4,117 @@
 package config
 
 import (
-	"strings"
+//	"fmt"
+//	"strings"
 	"testing"
-
 	"gopkg.in/yaml.v2"
+
+	"github.com/stretchr/testify/assert"
 )
+func TestNewConfig(t *testing.T) {
+	c := New()
+	got, err := yaml.Marshal(c)
+	assert.Nil(t,err)
+	// print(string(got))
 
-func TestLoadFull(t *testing.T) {
-
-	var cfgExp = Config{
-		ListenAddr:			":9201",
-		TicketDefaultSys:	"gitlab",
-		TicketDefaultGrp:	"user/project",
-		CfgScriptsDir:		"/etc/agate-scripts",
-		CfgPlaybookDir:		"/etc/agate-playbook",
-		MaxDays:			15,
-		CloseResolved:		true,
-		// EmailSmtp:			"localhost:25",
-		// EmailFrom:			"no-reply-agate@nowhere.none",
-		GitlabURL:			"https://gitlab.com/api/v4",
-		GitlabToken:		"secret-token",
-		HpsmURL:			"https://hpsm/api/v3",
-		HpsmCreateEp:		"incident2",
-		HpsmUpdateEp:		"incident2",
-		HpsmCloseEp:		"incident3",
-		HpsmUser:			"hpsm",
-		HpsmPass:			"pass",
-		MockURL:			"http://localhost:9202/ticket",
-		ScriptsDir:			"/etc/agate-scripts",
-		PlaybookDir:		"/etc/agate-playbook",
-	}
-
-	cfgfn := "testdata/config.good.full.yml"
-
-	cfgGot, err := LoadFile(cfgfn)
-
-	if err != nil {
-		t.Errorf("LoadFile %s: %s",cfgfn,err)
-	}
-
-	gotYml, err := yaml.Marshal(cfgGot)
-	if err != nil {
-		t.Fatalf("yaml.Marshal: %s",err)
-	}
-
-	expYml, err := yaml.Marshal(cfgExp)
-	if err != nil {
-		t.Fatalf("yaml.Marshal: %s",err)
-	}
-	gotLines := strings.Split(string(gotYml), "\n")
-	expLines := strings.Split(string(expYml),"\n")
-
-	for i, gv := range gotLines {
-		if gv != expLines[i] {
-			t.Fatalf("\n%s !=\n%s\nGOT:\n%s\nEXP:\n%s\n",
-				gv,expLines[i],gotYml,expYml)
-		}
-	}
-
+	exp := `global:
+  listen: "6101"
+  data-age: 15
+  scripts-dir: scripts
+  playbook-dir: playbook
+  scriptsdir: ""
+  playbookdir: ""
+ticket-sys:
+  default: mock
+  close-resolved: true
+  systems:
+    gitlab:
+      url: https://gitlab.com
+      repo: ""
+      token: ""
+    mock:
+      url: http://localhost:6102
+`
+	assert.Equal(t,exp,string(got))
 }
 
+func TestLoadMissing(t *testing.T) {
+	c, err := New().Load("not-a-file")
+	assert.Error(t,err)
+	assert.Nil(t,c)
+}
+func TestLoadBad(t *testing.T) {
+	c, err := New().Load("testdata/bad.yml")
+	assert.Error(t,err)
+	assert.Nil(t,c)
+}
+func TestLoadBadCont(t *testing.T) {
+	c, err := New().Load("testdata/bad-cont.yml")
+	assert.Error(t,err)
+	assert.Nil(t,c)
+}
 func TestLoadMin(t *testing.T) {
+	got, err := New().Load("testdata/good-min.yml")
+	assert.Nil(t,err)
+	assert.NotNil(t,got)
+	exp := New()
+	// load sets dirs
+	exp.Global.ScriptsDir = "testdata/scripts"
+	exp.Global.PlaybookDir = "testdata/playbook"
 
-	var cfgExp = Config{
-		ListenAddr:			":9201",
-		TicketDefaultSys:	"gitlab",
-		TicketDefaultGrp:	"user/project",
-		ScriptsDir:			"testdata/scripts",
-		PlaybookDir:		"testdata/playbook",
+	assert.Equal(t,exp,got)
+}
+func TestLoadFull(t *testing.T) {
+	exp :=  &Config{
+		Global: Global{
+			Listen: "127.0.0.1:4464",
+			DataAge: 30,
+			CfgScriptsDir: "/sdiff",
+			CfgPlaybookDir: "/pdiff",
+			ScriptsDir: "/sdiff",
+			PlaybookDir: "/pdiff",
+		},
+		Email: Email{
+			Smtp: "localhost:25",
+			From: "agate@nowhere",
+			To: "invalid",
+		},
+		Ticket: Ticket{
+			Resolved: true,
+			Default: "gitlab",
+			Sys: TicketSys{
+				Gitlab: TSysGitlab{
+					Url: "https://mylab",
+					Group: "paul",
+					Token: "secret-sauce",
+				},
+				Hpsm: TSysHpsm{
+					Url:		"https://myhpsm/api",
+					User:		"paul",
+					Pass:		"secret-sauce",
+					CreateEp:	"create",
+					UpdateEp:	"update",
+					CloseEp:	"close",
+					Group:		"team",
+					Defaults:	map[string]string{
+						"urgency": "now",
+						"assignee": "you",
+					},
+				},
+				Mock: TSysMock{
+					Url: "http://cbed:1234/abc",
+				},
+			},
+		},
 	}
-
-	cfgfn := "testdata/config.good.min.yml"
-
-	cfgGot, err := LoadFile(cfgfn)
-
-	if err != nil {
-		t.Errorf("LoadFile %s: %s",cfgfn,err)
+	if _, err := yaml.Marshal(exp); err == nil {
+		// print(string(yml))
+	} else {
+		assert.Nil(t,err)
 	}
+	got, err := New().Load("testdata/good-full.yml")
+	assert.Nil(t,err)
+	assert.NotNil(t,got)
 
-	gotYml, err := yaml.Marshal(cfgGot)
-	if err != nil {
-		t.Fatalf("yaml.Marshal: %s",err)
-	}
-
-	expYml, err := yaml.Marshal(cfgExp)
-	if err != nil {
-		t.Fatalf("yaml.Marshal: %s",err)
-	}
-	gotLines := strings.Split(string(gotYml), "\n")
-	expLines := strings.Split(string(expYml),"\n")
-
-	for i, gv := range gotLines {
-		if gv != expLines[i] {
-			t.Fatalf("\n%s !=\n%s\nGOT:\n%s\nEXP:\n%s\n",
-				gv,expLines[i],gotYml,expYml)
-		}
-	}
-
+	assert.Equal(t,exp,got)
 }

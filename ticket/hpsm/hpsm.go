@@ -12,7 +12,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/pahoughton/agate/model"
+	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/ticket/tid"
 )
 
 const (
@@ -33,14 +34,16 @@ const (
 
 )
 
-type HPSM struct {
-	Debug		bool
+type Hpsm struct {
+	grp			string
+	debug		bool
 	BaseUrl		string
 	CreateEp	string
 	UpdateEp	string
 	CloseEp		string
 	User		string
 	Pass		string
+	Defaults	map[string]string
 }
 
 type ReqEnvelope struct {
@@ -177,20 +180,26 @@ type In3RespIncident struct {
 	IncidentID	string		`xml:"IncidentID,omitempty"`
 }
 
-func New(url, createEp, updateEp, closeEp, user, pass string, dbg bool) *HPSM {
-	h := &HPSM{
-		Debug:		dbg,
-		BaseUrl:	url,
-		CreateEp:	createEp,
-		UpdateEp:	updateEp,
-		CloseEp:	closeEp,
-		User:		user,
-		Pass:		pass,
+func New(cfg config.TSysHpsm, dbg bool) *Hpsm {
+	h := &Hpsm{
+		debug:		dbg,
+		grp:		cfg.Group,
+		BaseUrl:	cfg.Url,
+		CreateEp:	cfg.CreateEp,
+		UpdateEp:	cfg.UpdateEp,
+		CloseEp:	cfg.CloseEp,
+		User:		cfg.User,
+		Pass:		cfg.Pass,
+		Defaults:	cfg.Defaults,
 	}
 	return h
 }
 
-func (h *HPSM) GoodStatusMesg(sm *StatusMessage) error {
+func (h *Hpsm) Group() string {
+	return h.grp
+}
+
+func (h *Hpsm) GoodStatusMesg(sm *StatusMessage) error {
 	if sm == nil ||
 		sm.Status == nil ||
 		*sm.Status != StatusSUCCESS {
@@ -199,14 +208,14 @@ func (h *HPSM) GoodStatusMesg(sm *StatusMessage) error {
 	return nil
 }
 
-func (h *HPSM) PostSoap(url, sact string, reqObj, resp interface{}) error {
+func (h *Hpsm) PostSoap(url, sact string, reqObj, resp interface{}) error {
 
 	reqXml, err := xml.MarshalIndent(reqObj,"  ","  ")
 	if err != nil {
 		return fmt.Errorf("hpsm marshal req %v",err)
 	}
 
-	if h.Debug {
+	if h.debug {
 		fmt.Println("hpsm req xml: "+string(reqXml))
 	}
 
@@ -244,7 +253,7 @@ func (h *HPSM) PostSoap(url, sact string, reqObj, resp interface{}) error {
 		return fmt.Errorf("hpsm post no response body")
 	}
 
-	if h.Debug {
+	if h.debug {
 		fmt.Println("hpsm resp: " + string(rawbody))
 	}
 	if res.StatusCode != 200 {
@@ -257,21 +266,21 @@ func (h *HPSM) PostSoap(url, sact string, reqObj, resp interface{}) error {
 		return fmt.Errorf("hpsm post resp unmarshal: %v",err)
 	}
 
-	if h.Debug {
+	if h.debug {
 		fmt.Printf("hpsm resp unmarsh: %v\n",resp)
 	}
 	return nil
 
 }
 
-func (h *HPSM) Create(wg string, a model.Alert) (string, error) {
+func (h *Hpsm) Create(wg, title, desc string) (*tid.Tid, error) {
 
 	ir := &CreateIncidentRequest{
 		Incident:	In2ReqIncident{
 			AffectedCI:				"Infrastructure",
 			AssignmentGroup:		wg,
-			BriefDescription:		a.Title(),
-			IncidentDescription:	a.Desc(),
+			BriefDescription:		title,
+			IncidentDescription:	desc,
 			Category:				"Incident",
 			Customer:				"ip_soft_int",
 			Impact:					4,
@@ -296,24 +305,24 @@ func (h *HPSM) Create(wg string, a model.Alert) (string, error) {
 	respEnv := new(In2RespEnvelope)
 
 	if err := h.PostSoap(url,act,reqEnv,respEnv); err != nil {
-		return "", err
+		return nil, err
 	}
 	if err := h.GoodStatusMesg(respEnv.Body.Resp.StatusMessage); err != nil {
-		return "", err
+		return nil, err
 	}
-	if h.Debug {
+	if h.debug {
 		fmt.Println("hpsm create ID: "+respEnv.Body.Resp.Incident.IncidentID)
 	}
-	return respEnv.Body.Resp.Incident.IncidentID, nil
+	return tid.NewString(respEnv.Body.Resp.Incident.IncidentID), nil
 
 }
 
-func (h *HPSM)AddComment(tid string, cmt string) error {
+func (h *Hpsm)Update(id *tid.Tid, cmt string) error {
 
 	ir := UpdateIncidentRequest{
 		Incident:	In2ReqIncident{
 			CurrentUpdate:		cmt,
-			IncidentID:			tid,
+			IncidentID:			id.String(),
 		},
 	}
 
@@ -335,19 +344,19 @@ func (h *HPSM)AddComment(tid string, cmt string) error {
 	if err := h.GoodStatusMesg(respEnv.Body.Resp.StatusMessage); err != nil {
 		return err
 	}
-	if h.Debug {
+	if h.debug {
 		fmt.Println("hpsm update ID: "+respEnv.Body.Resp.Incident.IncidentID)
 	}
 	return nil
 }
 
-func (h *HPSM)Close(tid, cmt string) error {
+func (h *Hpsm)Close(id *tid.Tid, cmt string) error {
 
 	ir := CloseIncidentRequest{
 		Incident:	Incident3{
 			Assignee:		"ip_soft_int",
 			ClosureCode:	"Automatically Closed",
-			IncidentID:		tid,
+			IncidentID:		id.String(),
 			Solution:		cmt,
 			Status:			"Resolved",
 		},
@@ -371,7 +380,7 @@ func (h *HPSM)Close(tid, cmt string) error {
 	if err := h.GoodStatusMesg(respEnv.Body.Resp.StatusMessage); err != nil {
 		return err
 	}
-	if h.Debug {
+	if h.debug {
 		fmt.Println("hpsm close ID: "+respEnv.Body.Resp.Incident.IncidentID)
 	}
 	return nil
