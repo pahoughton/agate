@@ -4,10 +4,11 @@
 package alert
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strings"
-
+	// "time"
 	pmod "github.com/prometheus/common/model"
 )
 
@@ -48,8 +49,26 @@ var (
 		"mongrp":		true,
 	}
 )
-func (a *Alert) Key() uint64 {
-	return uint64(a.Labels.Fingerprint())
+func (a *Alert) Key() []byte {
+	if b, err := a.StartsAt.MarshalBinary(); err == nil {
+		k := make([]byte,binary.MaxVarintLen64,
+			binary.MaxVarintLen64 +
+			len(b)+(len(b) % binary.MaxVarintLen64))
+		binary.PutUvarint(k,uint64(a.Fingerprint()))
+		return(append(k,b...))
+	} else {
+		panic(err)
+	}
+
+	/*
+	k := make([]byte,0,binary.Size(time.Time{}) + binary.Size(a.Fingerprint))
+
+		panic(err)
+	} else {
+		binary.PutUvarint(k,uint64(a.Fingerprint()))
+		return append(k,b...)
+	}
+*/
 }
 
 func (lm *LabelMap)SortedKeys() pmod.LabelNames {

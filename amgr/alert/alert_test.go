@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 	pmod "github.com/prometheus/common/model"
 
 	"gopkg.in/yaml.v2"
@@ -29,6 +31,7 @@ mountpoint: /home/paul/wip/maul/prom-poc/testdata/mnt
 maulnode: cbed
 `
 )
+/*
 var (
 	SortedLabelNames = pmod.LabelNames{
 		"alertname",
@@ -43,20 +46,24 @@ var (
 		"team",
 	}
 )
+*/
 func TestSortLabels(t *testing.T) {
+	exp := pmod.LabelNames{
+		"alertname",
+		"app",
+		"device",
+		"fstype",
+		"instance",
+		"job",
+		"maulnode",
+		"mongrp",
+		"mountpoint",
+		"team",
+	}
 	var ylabs LabelMap
-	if err := yaml.Unmarshal([]byte(RandLabels),&ylabs); err != nil {
-		t.Error(err)
-	}
-	skeys := ylabs.SortedKeys()
-	if len(skeys) != len(SortedLabelNames) {
-		t.Errorf("len: %d != %d",len(skeys),len(SortedLabelNames))
-	}
-	for i, v := range skeys {
-		if v != SortedLabelNames[i] {
-			t.Errorf("%d: %v != %v",i,v,SortedLabelNames[i])
-		}
-	}
+	err := yaml.Unmarshal([]byte(RandLabels),&ylabs)
+	assert.Nil(t,err)
+	assert.Equal(t,exp,ylabs.SortedKeys())
 }
 
 func TestAlertTitle(t *testing.T) {
@@ -83,50 +90,39 @@ func TestAlertTitle(t *testing.T) {
 		},
 		"firing",
 	}
-	if ta.Title() != atexp {
-		t.Errorf("title: %v != %v\n",ta.Title(),atexp)
-	}
+	assert.Equal(t,atexp,ta.Title())
+
 	delete(ta.Annotations,"agate_title")
-	if ta.Title() != texp {
-		t.Errorf("title: %v != %v\n",ta.Title(),texp)
-	}
+	assert.Equal(t,texp,ta.Title())
+
 	delete(ta.Annotations,"title")
-	if ta.Title() != sexp {
-		t.Errorf("title: %v != %v\n",ta.Title(),sexp)
-	}
+	assert.Equal(t,sexp,ta.Title())
+
 	delete(ta.Annotations,"subject")
-	texp = string(ta.Labels["alertname"]) + " on " + "ancbed"
-	if ta.Title() != texp {
-		t.Errorf("title: %v != %v\n",ta.Title(),texp)
-	}
+	exp := string(ta.Labels["alertname"]) + " on " + "ancbed"
+	assert.Equal(t,exp,ta.Title())
+
 	delete(ta.Labels,"agate_node")
-	texp = string(ta.Labels["alertname"]) + " on " + "hncbed"
-	if ta.Title() != texp {
-		t.Errorf("title: %v != %v\n",ta.Title(),texp)
-	}
+	exp = string(ta.Labels["alertname"]) + " on " + "hncbed"
+	assert.Equal(t,exp,ta.Title())
+
 	delete(ta.Labels,"hostname")
-	texp = string(ta.Labels["alertname"]) + " on " + "cbed"
-	if ta.Title() != texp {
-		t.Errorf("title: %v != %v\n",ta.Title(),texp)
-	}
+	exp = string(ta.Labels["alertname"]) + " on " + "cbed"
+	assert.Equal(t,exp,ta.Title())
+
 	delete(ta.Labels,"instance")
-	texp = string(ta.Labels["alertname"])
-	if ta.Title() != texp {
-		t.Errorf("title: %v != %v\n",ta.Title(),texp)
-	}
+	exp = string(ta.Labels["alertname"])
+	assert.Equal(t,exp,ta.Title())
+
 	delete(ta.Labels,"alertname")
-	texp = "unknown"
-	if ta.Title() != texp {
-		t.Errorf("title: %v != %v\n",ta.Title(),texp)
-	}
+	exp = "unknown"
+	assert.Equal(t,exp,ta.Title())
 }
 
 func TestAlertDesc(t *testing.T) {
 	startsStr := "2019-02-14T12:34:54.311358476-07:00"
 	startsAt, err := time.Parse(time.RFC3339,startsStr)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t,err)
 	ta := Alert{
 		pmod.Alert{
 			Labels: pmod.LabelSet{
@@ -154,7 +150,7 @@ func TestAlertDesc(t *testing.T) {
 		},
 		"firing",
 	}
-	texp := `
+	exp := `
 From: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
 
 When: 2019-02-14 12:34:54.311358476 -0700 MST
@@ -173,9 +169,7 @@ Labels:
             team: storage
 `
 	// print(ta.Desc())
-	if ta.Desc() != texp {
-		t.Errorf("desc: %v\n",ta.Desc())
-	}
+	assert.Equal(t,exp,ta.Desc())
 }
 
 const GroupJson = `{
@@ -276,29 +270,23 @@ const GroupJson = `{
 
 func TestAlertGroupTitle(t *testing.T) {
 
-	var tag AlertGroup
-	if err := json.Unmarshal([]byte(GroupJson), &tag); err != nil {
-		t.Errorf("json.Unmarshal agrp: %s\n%v",err.Error(),GroupJson)
-		return
-	}
-	texp := "multiple disk free below 30%"
-	if tag.Title() != texp {
-		t.Errorf("group title %v != %v\n",tag.Title(),texp)
-	}
-	delete( tag.ComAnnots, "agate_group_title")
-	texp = fmt.Sprintf("%d grouped alerts",len(tag.Alerts))
-	if tag.Title() != texp {
-		t.Errorf("group title %v != %v\n",tag.Title(),texp)
-	}
+	var ag AlertGroup
+	assert.Nil(t,json.Unmarshal([]byte(GroupJson), &ag))
+	exp := "multiple disk free below 30%"
+	assert.Equal(t,exp,ag.Title())
+
+	delete( ag.ComAnnots, "agate_group_title")
+	exp = fmt.Sprintf("%d grouped alerts",len(ag.Alerts))
+	assert.Equal(t,exp,ag.Title())
 }
 
 func TestAlertGroupDesc(t *testing.T) {
-	var tag AlertGroup
-	if err := json.Unmarshal([]byte(GroupJson), &tag); err != nil {
+	var ag AlertGroup
+	if err := json.Unmarshal([]byte(GroupJson), &ag); err != nil {
 		t.Errorf("json.Unmarshal agrp: %s\n%v",err.Error(),GroupJson)
 		return
 	}
-	texp := `
+	exp := `
 Common Labels:
        alertname: disk-usage
              app: desktop
@@ -359,11 +347,46 @@ Labels:
             team: storage
 
 `
-	tgot := tag.Desc()
-	if len(tgot) != len(texp) {
-		t.Errorf("len: %d != %d\n",len(tgot),len(texp))
+	assert.Equal(t,exp,ag.Desc())
+}
+
+func TestAlertKey(t *testing.T) {
+
+	title := "cbed /mnt/wd4blue free 22% below 30%"
+	a := Alert{
+		pmod.Alert{
+			Labels: pmod.LabelSet{
+				"alertname":  "disk-usage",
+				"agate_node": "cbed",
+				"instance":   "cbed:9100",
+				"mountpoint": "/mnt/wd4blue",
+			},
+			Annotations: pmod.LabelSet{
+				"group_title": "multiple disk free below 30%",
+				"metric":      "node_filesystem_free_bytes",
+				"title":       pmod.LabelValue(title),
+			},
+			StartsAt: time.Now(),
+		},
+		"firing",
 	}
-	if tag.Desc() != texp {
-		t.Errorf("desc: %v\n",tag.Desc())
-	}
+	exp := a.Key()
+	got := a.Key()
+	assert.Equal(t,exp,got)
+
+	a.StartsAt = time.Now()
+	got = a.Key()
+	assert.NotEqual(t,exp,got)
+
+	exp = got
+	a.Labels["agate_node"] = "cbEd"
+	got = a.Key()
+	assert.NotEqual(t,exp,got)
+
+	exp = got
+	delete(a.Labels,"agate_node")
+	got = a.Key()
+	assert.NotEqual(t,exp,got)
+
+	assert.Equal(t,a.Key(),a.Key())
 }
