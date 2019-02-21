@@ -1,81 +1,127 @@
 /* 2019-02-13 (cc) <paul4hough@gmail.com>
    FIXME what is this for?
 */
-package go
+package db
 
+import (
+	"encoding/binary"
+	"errors"
+	"github.com/boltdb/bolt"
+)
 const (
-	agJsonBucket	"ag-json"
+	agroupBName	= "agroup"
 )
 
-type AGroupRcvd struct {
+type AGroup struct {
 	Json	[]byte
 	Resolve	bool
 }
+func agroupBucket() []byte {
+	return []byte(agroupBName)
+}
 
-func (adb *AgateDB) AgroupAdd(json []byte,resolve bool) {
+func (db *DB) AGroupAdd(json []byte,resolve bool) {
 
-	err := adb.db.Update(func(tx *bolt.Tx) error {
+	err := db.db.Update(func(tx *bolt.Tx) error {
 
-		bkt, err := tx.CreateBucketIfNotExists([]byte(agJsonBucket))
-		if err != nil {
-			panic(err)
-		}
-		key, err := bkt.NextSequence()
-		if err != nil {
-			panic(err)
-		}
-		keyBuf := make([]byte,binary.MaxVarintLen64)
-		kn := binary.PutUvarint(keyBuf,key)
+		if b := tx.Bucket(agroupBucket()); b != nil {
+			if key, err := b.NextSequence(); err == nil {
+				keyBuf := make([]byte,binary.MaxVarintLen64)
+				kn := binary.PutUvarint(keyBuf,key)
 
-		rbyte byte
-		if resolve {
-			rbyte = 1
+				var rbyte byte
+				if resolve {
+					rbyte = 1
+				} else {
+					rbyte = 0
+				}
+				db.metrics.agqueue.Inc()
+				return b.Put(keyBuf[:kn],append(json,rbyte))
+			} else {
+				if db.debug { panic(err) }
+				return err
+			}
 		} else {
-			rbyte = 0
+			msg := string(agroupBucket()) + ": bucket missing"
+			panic(msg)
+			return errors.New(msg)
 		}
-
-		return bkt.Put(keyBuf[:kn],append(json,rbyte))
-
 	})
     if err != nil {
 		panic(err)
 	}
 }
 
-func (adb *AgateDB) AGroupNext() *AGroupRcvd {
+func (db *DB) AGroupQueue() []uint64 {
 
-	var agrcv *AGroupRcvd
-	agrcv = nil
+	var q []uint64
 
-	err := adb.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket([]byte(agJsonBucket))
-		if bkt == nil {
-			return errors.New(agJsonBucket + " db bucket nil")
-		}
-
-		key, val := bkt.Cursor().First()
-		if key == nil {
+	err := db.db.View(func(tx *bolt.Tx) error {
+		if b := tx.Bucket(agroupBucket()); b != nil {
+			q = make([]uint64,0,b.Stats().KeyN)
+			c := b.Cursor()
+			for k, _ := c.First(); k != nil; k, _ = c.Next() {
+				uk, _ := binary.Uvarint(k)
+				q = append(q,uk)
+			}
 			return nil
-		}
-		if err := bkt.Delete(key); err != nil {
-			return err
-		}
-		if bkt.Stats().KeyN == 0 {
-			bkt.SetSequence(0)
-		}
-		agrcv = &AGroupRcvd{}
-
-		rbyte = val[len(val)-1:1]
-		if rbyte == 0 {
-			agrcv.Resolve = false
 		} else {
-			agrcv.Resolve = true
+			msg := string(agroupBucket()) + ": bucket missing"
+			panic(msg)
+			return errors.New(msg)
 		}
-		copy(agrcv.Json,val[:len(val)-1])
-		return nil
+	})
+    if err != nil {
+		panic(err)
+	}
+	return q
+}
+
+func (db *DB) AGroupGet(key uint64) *AGroup  {
+	ag := &AGroup{}
+
+	err := db.db.View(func(tx *bolt.Tx) error {
+		if b := tx.Bucket(agroupBucket()); b != nil {
+			keyBuf := make([]byte,binary.MaxVarintLen64)
+			kn := binary.PutUvarint(keyBuf,key)
+
+			val := b.Get(keyBuf[:kn])
+			if val != nil {
+				ag.Resolve = uint8(val[len(val)-1]) != 0
+				ag.Json = make([]byte,len(val)-1)
+				copy(ag.Json,val[:len(val)-1])
+			} else {
+				ag = nil
+			}
+			return nil
+		} else {
+			msg := string(agroupBucket()) + ": bucket missing"
+			panic(msg)
+			return errors.New(msg)
+		}
+	})
+    if err != nil {
+		panic(err)
+	}
+	return ag
+}
+
+func (db *DB) AGroupDel(key uint64) {
+
+	err := db.db.Update(func(tx *bolt.Tx) error {
+		if b := tx.Bucket(agroupBucket()); b != nil {
+			keyBuf := make([]byte,binary.MaxVarintLen64)
+			kn := binary.PutUvarint(keyBuf,key)
+
+			db.metrics.agqueue.Dec()
+			return b.Delete(keyBuf[:kn])
+		} else {
+			msg := string(agroupBucket()) + ": bucket missing"
+			panic(msg)
+			return errors.New(msg)
+		}
 	})
 	if err != nil {
 		panic(err)
 	}
-	return agrcv
 }

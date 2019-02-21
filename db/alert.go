@@ -3,118 +3,122 @@
 */
 package db
 
-
-const (
-	BNameFmt = "2006-01-02"  // buckets named by alert date
-	queueBucket = "tqueue"
+import (
+	"fmt"
+	"strings"
+	"time"
+	"github.com/boltdb/bolt"
+	promp "github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	BNameFmt	= "2006-01-02"  // buckets named by alert date
+	alertsBName = "alerts"
+)
 
-type AlertTicket struct {
-	Tid		string
-	Qid		uint64
+func alertsBucket() []byte {
+	return []byte(alertsBName)
 }
 
+func startBucket(start time.Time) []byte {
+	return []byte(start.Format(BNameFmt))
+}
 
-func (adb *AgateDB) TicketCleanBuckets() {
+func (db *DB) AlertCleanBuckets() {
 
-	minDate := time.Now().AddDate(0,0,adb.maxDays * -1).Format(BNameFmt)
+	minDate := time.Now().AddDate(0,0,db.maxDays * -1).Format(BNameFmt)
 
 	fmt.Println("INFO cleaning buckets before ",minDate)
 
-	var delList []string
-
-	err := adb.db.View(func(tx *bolt.Tx) error {
-
-		err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			if strings.Compare(string(name),minDate) < 0 {
-				delList = append(delList,string(name))
+	err := db.db.Update(func(tx *bolt.Tx) error {
+		ab := tx.Bucket(alertsBucket())
+		if ab == nil {
+			return nil
+		}
+		err := ab.ForEach( func(k, v []byte) error {
+			if v == nil {
+				date := string(k)
+				if strings.Compare(date,minDate) < 0 {
+					fmt.Println("INFO remove bucket ",date)
+					ab.DeleteBucket(k)
+					mlabels := promp.Labels{"date": date}
+					db.metrics.tickets.Delete(mlabels)
+				}
 			}
 			return nil
 		})
 		return err
 	})
 	if err != nil {
-		fmt.Println("FATAL reading buckets ",err.Error())
-		return
+		db.metrics.errors.Inc()
+		fmt.Println("ERROR clean buckets ",err.Error())
+		if db.debug { panic(err); }
 	}
-	err = adb.db.Update(func(tx *bolt.Tx) error {
-		for _, bname := range delList {
-			if err := tx.DeleteBucket([]byte(bname)); err != nil {
-				fmt.Println("ERROR delete bucket ",bname," - ",err.Error())
+}
+
+
+func (db *DB) AlertAdd(start time.Time,key,val []byte) {
+
+	err := db.db.Update(func(tx *bolt.Tx) error {
+		bname := startBucket(start)
+		if ab := tx.Bucket(alertsBucket()); ab != nil {
+			if b, err := ab.CreateBucketIfNotExists(bname); b != nil {
+				db.metrics.tickets.With(
+					promp.Labels{"date":string(bname)},
+				).Inc()
+				return b.Put(key,val)
+			} else {
+				panic(err)
+			}
+		} else {
+			panic(string(alertsBucket()))
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (db *DB) AlertGet(start time.Time,key []byte) []byte {
+
+	var got []byte
+	err := db.db.View(func(tx *bolt.Tx) error {
+		bname := startBucket(start)
+		if ab := tx.Bucket(alertsBucket()); ab != nil {
+			if b := ab.Bucket(bname); b != nil {
+				if val := b.Get(key); val != nil {
+					got = make([]byte,len(val))
+					copy(got,val)
+				}
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println("FATAL deleting buckets ",err.Error())
-		return
+		panic(err)
 	}
+	return got
 }
 
-FIXME - start time part of key
+func (db *DB) AlertDel(start time.Time,key []byte) {
 
-func (adb *AgateDB) TicketAdd(
-	start	time.Time,
-	fp		uint64,
-	tid		string) error {
-
-	bname := start.Format(BNameFmt)
-
-	aKey := make([]byte, binary.MaxVarintLen64)
-
-	binary.PutUvarint(aKey, fp)
-
-	err := adb.db.Update(func(tx *bolt.Tx) error {
-
-		bkt, err := tx.CreateBucketIfNotExists([]byte(bname))
-		if err != nil {
-			return err
+	err := db.db.Update(func(tx *bolt.Tx) error {
+		bname := startBucket(start)
+		if ab := tx.Bucket(alertsBucket()); ab != nil {
+			if b := ab.Bucket(bname); b != nil {
+				db.metrics.tickets.With(
+					promp.Labels{"date":string(bname)},
+				).Dec()
+				return b.Delete(key)
+			} // else {	panic(string(bname) + " bucket missing") }
+			// although surprising, no real harm
+		} else {
+			panic(string(alertsBucket()))
 		}
-		return bkt.Put(aKey,[]byte(tid))
-	})
-	return err
-}
-
-func (adb *AgateDB) Ticket(start time.Time,fp uint64) (string, error) {
-
-	bname := start.Format(BNameFmt)
-
-	aKey := make([]byte, binary.MaxVarintLen64)
-
-	binary.PutUvarint(aKey, fp)
-
-	var tid string
-
-	err := adb.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket([]byte(bname))
-		if bkt == nil {
-			return errors.New("bucket not found " + bname)
-		}
-		val := bkt.Get(aKey)
-		if val == nil {
-			return fmt.Errorf("alert not found: %u", aKey)
-		}
-		copy(tid,string(val))
 		return nil
 	})
-	return tid, err
-}
-
-func (adb *AgateDB) TicketDelete(start time.Time,fp uint64) error {
-
-	bname := start.Format(BNameFmt)
-
-	aKey := make([]byte, binary.MaxVarintLen64)
-
-	binary.PutUvarint(aKey, fp)
-
-	err := adb.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket([]byte(bname))
-		if bkt == nil {
-			return errors.New("bucket not found " + bname)
-		}
-		return bkt.Delete(aKey)
-	})
-	return err
+	if err != nil {
+		panic(err)
+	}
 }

@@ -9,42 +9,111 @@
 package db
 
 import (
-	"errors"
-	"encoding/binary"
-	"fmt"
+//	"fmt"
 	"os"
 	"path"
-	"strings"
 	"time"
 
-
+	promp "github.com/prometheus/client_golang/prometheus"
 	"github.com/boltdb/bolt"
 )
 
-type AgateDB struct {
-	db *bolt.DB
+const (
+	dbFn			= "agate.bolt"
+)
+
+type Metrics struct {
+	agqueue		promp.Gauge
+	tickets		*promp.GaugeVec
+	errors		promp.Counter
+}
+type DB struct {
+	debug	bool
 	maxDays int
+	db		*bolt.DB
+	metrics	*Metrics
 }
 
-func Open(dir string, mode os.FileMode, maxDays uint ) (*AgateDB, error) {
-	opts := &bolt.Options{
-		Timeout: 50 * time.Millisecond,
-	}
-	dbfn := path.Join(dir,"agate.bolt")
+func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 
-	bdb, err := bolt.Open(dbfn, mode, opts)
+	fn := path.Join(dir,dbFn)
+	_, err := os.Stat(fn)
+	isnew := err != nil || os.IsNotExist(err)
+	opts := &bolt.Options{Timeout: 50 * time.Millisecond}
+	bdb, err := bolt.Open(fn,mode,opts)
 	if err != nil {
-		return nil, fmt.Errorf("open %s %v - %v",dbfn,mode,err)
+		return nil, err
 	}
-	adb := &AgateDB{db: bdb, maxDays: int(maxDays)}
+	if isnew {
+		err := bdb.Update(func(tx *bolt.Tx) error {
+			if _, err := tx.CreateBucket(agroupBucket()); err != nil {
+				return err
+			}
+			if _, err := tx.CreateBucket(alertsBucket()); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	db := &DB{
+		debug: debug,
+		db: bdb,
+		maxDays: int(maxDays),
+		metrics: &Metrics{
+			agqueue: promp.NewGauge(
+				promp.GaugeOpts{
+					Namespace: "agate",
+					Subsystem: "db",
+					Name:      "agroup_queue_size",
+					Help:      "number of records in agroup bucket",
+				}),
+			tickets: promp.NewGaugeVec(
+				promp.GaugeOpts{
+					Namespace: "agate",
+					Subsystem: "db",
+					Name:      "open_alerts_size",
+					Help:      "number of records in agroup bucket",
+				},[]string{ "date" }),
+			errors: promp.NewCounter(
+				promp.CounterOpts{
+					Namespace: "agate",
+					Subsystem: "db",
+					Name:      "errors_total",
+					Help:      "number of records in agroup bucket",
+				}),
+		},
+	}
 
-	adb.TicketCleanBuckets()
+	promp.MustRegister(
+		db.metrics.agqueue,
+		db.metrics.tickets,
+		db.metrics.errors)
+
+	db.AlertCleanBuckets()
 	// reclean alert buckets every 24 hours
-	cleanBucketTicker := time.NewTicker(time.Hour * 24)
 	go func() {
-		for _ = range cleanBucketTicker.C {
-			adb.TicketCleanBuckets()
+		for _ = range time.NewTicker(time.Hour * 24).C {
+			db.AlertCleanBuckets()
 		}
 	}()
-	return adb, nil
+
+	return db, nil
+}
+func (db *DB) Close() {
+	if db.metrics.agqueue != nil {
+		promp.Unregister(db.metrics.agqueue);
+		db.metrics.agqueue = nil
+	}
+	if db.metrics.tickets != nil  {
+		promp.Unregister(db.metrics.tickets);
+		db.metrics.tickets = nil
+	}
+	if db.metrics.errors != nil  {
+		promp.Unregister(db.metrics.errors);
+		db.metrics.errors = nil
+	}
+	if db.db != nil { db.db.Close(); db.db = nil }
 }
