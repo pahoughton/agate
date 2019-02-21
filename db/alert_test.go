@@ -49,7 +49,8 @@ func TestAlertDel(t *testing.T) {
 		for k, v := range data {
 			db.AlertAdd(today,[]byte(k),[]byte(v))
 		}
-		for k, _ := range data {
+		for k, v := range data {
+			assert.Equal(t,[]byte(v),db.AlertGet(today,[]byte(k)))
 			db.AlertDel(today,[]byte(k))
 			assert.Nil(t,db.AlertGet(today,[]byte(k)))
 		}

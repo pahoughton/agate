@@ -103,7 +103,7 @@ func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 	return db, nil
 }
 func (db *DB) Close() {
-	if db.metrics.agqueue != nil {
+	if db != nil && db.metrics != nil && db.metrics.agqueue != nil {
 		promp.Unregister(db.metrics.agqueue);
 		db.metrics.agqueue = nil
 	}
