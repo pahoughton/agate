@@ -28,8 +28,6 @@ func (db *DB) AlertCleanBuckets() {
 
 	minDate := time.Now().AddDate(0,0,db.maxDays * -1).Format(BNameFmt)
 
-	fmt.Println("INFO cleaning buckets before ",minDate)
-
 	err := db.db.Update(func(tx *bolt.Tx) error {
 		ab := tx.Bucket(alertsBucket())
 		if ab == nil {

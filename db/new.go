@@ -9,7 +9,7 @@
 package db
 
 import (
-//	"fmt"
+	"fmt"
 	"os"
 	"path"
 	"time"
@@ -96,6 +96,7 @@ func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 	// reclean alert buckets every 24 hours
 	go func() {
 		for _ = range time.NewTicker(time.Hour * 24).C {
+			fmt.Println("INFO cleaning buckets before")
 			db.AlertCleanBuckets()
 		}
 	}()
@@ -103,6 +104,11 @@ func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 	return db, nil
 }
 func (db *DB) Close() {
+	db.unregister()
+	if db.db != nil { db.db.Close(); db.db = nil }
+}
+
+func (db *DB) unregister() { // for testing
 	if db != nil && db.metrics != nil && db.metrics.agqueue != nil {
 		promp.Unregister(db.metrics.agqueue);
 		db.metrics.agqueue = nil
@@ -115,5 +121,4 @@ func (db *DB) Close() {
 		promp.Unregister(db.metrics.errors);
 		db.metrics.errors = nil
 	}
-	if db.db != nil { db.db.Close(); db.db = nil }
 }

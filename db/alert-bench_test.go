@@ -23,23 +23,18 @@ func BenchmarkAlertAdd(b *testing.B) {
 		}
 	})
 }
-func BenchmarkAlertGet(b *testing.B) {
+func BenchmarkAlertAddGet(b *testing.B) {
 	benchit(b,func (b *testing.B,db *DB) {
 		today := time.Now()
-		print(fmt.Sprintf("brun %d %v\n",b.N,today))
 		data := make(map[string]string,b.N)
 		for i := 0; i < b.N; i += 1 {
 			data[fmt.Sprintf("k-%09d",i)] = strconv.Itoa(i)
 		}
-		print(fmt.Sprintf("brun add %d %v\n",b.N,time.Now()))
+		b.ResetTimer()
 		for k, v := range data {
-			// print(" add " + k + "\n")
 			db.AlertAdd(today,[]byte(k),[]byte(v))
 		}
-		b.ResetTimer()
-		print(fmt.Sprintf("brun get %d %v\n",b.N,time.Now()))
 		for k, _ := range data {
-			// print(" get " + k + "\n")
 			db.AlertGet(today,[]byte(k))
 		}
 
