@@ -13,6 +13,21 @@ import (
 	"github.com/pahoughton/agate/config"
 
 )
+func TestAnsibleAvail(t *testing.T) {
+	cfg := config.New()
+	cfg.Global.PlaybookDir = "testdata/playbook"
+
+	r := New(cfg.Global,false)
+	labels := pmod.LabelSet{}
+	assert.False(t,r.AnsibleAvail(labels))
+	labels = pmod.LabelSet{"alertname": "remed"}
+	assert.True(t,r.AnsibleAvail(labels))
+	labels = pmod.LabelSet{"alertname": "invalid"}
+	assert.False(t,r.AnsibleAvail(labels))
+
+	r.Close()
+}
+
 func TestAnsible(t *testing.T) {
 	cfg := config.New()
 	cfg.Global.PlaybookDir = "testdata/playbook"

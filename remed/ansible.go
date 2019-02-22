@@ -8,11 +8,22 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 
 	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
+func (r *Remed) AnsibleAvail(labels pmod.LabelSet) bool {
+	aname, ok := labels["alertname"]
+	if ok {
+		ardir := path.Join(r.playbookDir,"roles",string(aname))
+		finfo, err := os.Stat(ardir)
+		return err == nil && finfo.IsDir()
+	} else {
+		return ok
+	}
+}
 
 func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 
@@ -20,6 +31,7 @@ func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 	if ! ok {
 		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
 	}
+
 	// create inventory file for ansible
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {

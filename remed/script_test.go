@@ -13,6 +13,21 @@ import (
 	"github.com/pahoughton/agate/config"
 
 )
+func TestScriptAvail(t *testing.T) {
+	cfg := config.New()
+	cfg.Global.ScriptsDir = "testdata/scripts"
+
+	r := New(cfg.Global,false)
+	labels := pmod.LabelSet{}
+	assert.False(t,r.ScriptAvail(labels))
+	labels = pmod.LabelSet{"alertname": "remed"}
+	assert.True(t,r.ScriptAvail(labels))
+	labels = pmod.LabelSet{"alertname": "invalid"}
+	assert.False(t,r.ScriptAvail(labels))
+
+	r.Close()
+}
+
 func TestScript(t *testing.T) {
 	cfg := config.New()
 	cfg.Global.ScriptsDir = "testdata/scripts"

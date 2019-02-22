@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 
 	"gopkg.in/yaml.v2"
 
@@ -16,6 +16,16 @@ import (
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
+func (r *Remed) ScriptAvail(labels pmod.LabelSet) bool {
+	aname, ok := labels["alertname"]
+	if ok {
+		fn := path.Join(r.scriptsDir,string(aname))
+		finfo, err := os.Stat(fn)
+		return err == nil && finfo.Mode().Perm() & 0550 != 0
+	} else {
+		return ok
+	}
+}
 
 func (r *Remed)Script(node string, labels pmod.LabelSet) (string, error) {
 
@@ -42,7 +52,7 @@ func (r *Remed)Script(node string, labels pmod.LabelSet) (string, error) {
 	if r.debug {
 		os.Setenv("DEBUG","1")
 	}
-	scriptfn := filepath.Join(r.scriptsDir,string(string(aname)))
+	scriptfn := path.Join(r.scriptsDir,string(string(aname)))
 
 	cmdargs := []string{node,lfile.Name()}
 
