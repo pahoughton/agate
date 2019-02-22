@@ -14,27 +14,19 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 	} else {
 		resStr = "false"
 	}
-	am.metrics.AlertGroupsRecvd.With(
-		promp.Labels{
-			"resolve": resStr,
-		}).Inc()
+	am.metrics.Recvd.With(promp.Labels{"resolve":resStr}).Inc()
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		am.Error(fmt.Sprintf(
-			"amgr.ServeHTTP: ioutil.ReadAll - %s",err.Error()))
+		if am.debug {
+			panic(err)
+		} else {
+			am.ErrorMesg(err,"amgr.ServeHTTP: ioutil.ReadAll")
+		}
 		return
 	}
-	defer r.Body.Close()
-	err := am.db.AgroupAdd(b,resolve)
-	if err != nil {
-		am.Error(fmt.Sprintf(
-			"amgr.ServeHTTP: db.AmgrAdd: %s",err.Error()))
-		return
+	if err := am.db.AgroupAdd(b,resolve); err != nil {
+		panic(err)
 	}
-
-	select {
-	case a.manager <- true:
-	case <- time.After(1):
-	}
+	am.manager.Notify(1)
 }

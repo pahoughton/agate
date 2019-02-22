@@ -15,10 +15,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pahoughton/agate/model"
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/ticket"
-	"github.com/pahoughton/agate/proc"
+	"github.com/pahoughton/agate/remed"
 	"github.com/pahoughton/agate/db"
 
 	pmod "github.com/prometheus/common/model"
@@ -31,74 +30,65 @@ const (
 	ATimeFmt = "2006-01-02T15:04:05.000000000-07:00"
 )
 
-type Amgr struct {
-	Debug				bool
-	Adb					*db.AlertDB
-	Ticket				*ticket.Ticket
-	Proc				*proc.Proc
-	CloseResolved		bool
-	AlertGroupsRecvd	*promp.CounterVec
-	AlertsRecvd			*promp.CounterVec
-	AlertDups			*promp.CounterVec
-	Errors				promp.Counter
+type Metrics struct {
+    Recvd	*promp.CounterVec
+	Alerts	*promp.CounterVec
+	Errors	promp.Counter
 }
 
-func New(c *config.Config,dataDir string,dbg bool) *Handler {
+
+type Amgr struct {
+	debug			bool
+	db				*db.DB
+	ticket			*ticket.Ticket
+	remed			*remed.Remed
+	qmgr			*Manager
+	respq			chan
+	metrics			Metrics
+}
+
+func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 
 	adb, err := db.Open(dataDir, 0664, c.MaxDays);
 	if err != nil {
-		fmt.Println("FATAL: open db - ",err.Error())
-		os.Exit(1)
+		panic(err)
 	}
+	am := &Amgr{
+		debug:		dbg,
+		db:			adb,
+		ticket:		ticket.New(c.Ticket,dbg),
+		remed:		remed.New(c.Global,dbg),
 
-	h := &Handler{
-		Debug:			dbg,
-		Adb:			adb,
-		Ticket:			ticket.New(c,dbg),
-		Proc:			proc.New(c,dbg),
-		CloseResolved:	c.CloseResolved,
-
-		AlertGroupsRecvd: proma.NewCounterVec(
-			promp.CounterOpts{
-				Namespace: "agate",
-				Name:      "alert_group_received_total",
-				Help:      "number of alert groups received",
-			}, []string{
-				"status",
-			}),
-		AlertsRecvd: proma.NewCounterVec(
-			promp.CounterOpts{
-				Namespace: "agate",
-				Name:      "alerts_received_total",
-				Help:      "number of alerts received",
-			}, []string{
-				"name",
-				"node",
-				"status",
-			}),
-		AlertDups: proma.NewCounterVec(
-			promp.CounterOpts{
-				Namespace: "agate",
-				Name:      "alert_dups_total",
-				Help:      "number of duplicate alerts received",
-			}, []string{
-				"name",
-				"node",
-			}),
-		Errors: proma.NewCounter(
-			promp.CounterOpts{
-				Namespace: "agate",
-				Name:      "errors_total",
-				Help:      "number of errors",
-			}),
+		metrics: Metrics{
+			Recvd: proma.NewCounter(
+				promp.CounterOpts{
+					Namespace: "agate",
+					Name:      "agroup_received_total",
+					Help:      "number of alert groups received",
+				}),
+			Alerts: proma.NewCounterVec(
+				promp.CounterOpts{
+					Namespace: "agate",
+					Name:      "alerts_received_total",
+					Help:      "number of alerts received",
+				}, []string{
+					"name",
+					"node",
+				}),
+			Errors: proma.NewCounter(
+				promp.CounterOpts{
+					Namespace: "agate",
+					Name:      "amgr_errors_total",
+					Help:      "number of amgr errors",
+				}),
+		},
 	}
-
-	go h.AlertQueueManager()
-	go h.AlertProc()
-	return h
-
+	am.qmgr = NewManager()
+	am.respq = make(chan uint64)
+	go am.Manage()
+	return am
 }
-
+/*
 func (h *Handler)AlertQueueManager() {
 
 	for {
@@ -315,3 +305,4 @@ func (h *Handler)AlertGroup(w http.ResponseWriter,r *http.Request ) error {
 	}
 	return err
 }
+*/

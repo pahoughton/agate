@@ -3,7 +3,7 @@
 */
 package amgr
 
-func (am *Amgr)Remediate(a *model.Alert,tid string,multi bool) {
+func (am *Amgr)Fix(a *alert.Alert,tid string,multi bool) {
 
 	aname = a.Name()
 	node = a.Node()
