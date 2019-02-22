@@ -14,6 +14,7 @@ import (
 	"path"
 	"time"
 
+	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 	"github.com/boltdb/bolt"
 )
@@ -63,21 +64,21 @@ func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 		db: bdb,
 		maxDays: int(maxDays),
 		metrics: &Metrics{
-			agqueue: promp.NewGauge(
+			agqueue: proma.NewGauge(
 				promp.GaugeOpts{
 					Namespace: "agate",
 					Subsystem: "db",
 					Name:      "agroup_queue_size",
 					Help:      "number of records in agroup bucket",
 				}),
-			tickets: promp.NewGaugeVec(
+			tickets: proma.NewGaugeVec(
 				promp.GaugeOpts{
 					Namespace: "agate",
 					Subsystem: "db",
 					Name:      "open_alerts_size",
 					Help:      "number of records in agroup bucket",
 				},[]string{ "date" }),
-			errors: promp.NewCounter(
+			errors: proma.NewCounter(
 				promp.CounterOpts{
 					Namespace: "agate",
 					Subsystem: "db",
@@ -86,11 +87,6 @@ func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 				}),
 		},
 	}
-
-	promp.MustRegister(
-		db.metrics.agqueue,
-		db.metrics.tickets,
-		db.metrics.errors)
 
 	db.AlertCleanBuckets()
 	// reclean alert buckets every 24 hours
