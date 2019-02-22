@@ -26,8 +26,7 @@ func TestNew(t *testing.T) {
 			Url:	"http://gitlab.com",
 			Token:	Token,
 			Group:	"test",
-		},
-		false)
+		},2,false)
 	assert.NotNil(t,gl.c)
 	assert.False(t,gl.debug)
 }
@@ -39,8 +38,7 @@ func TestGroup(t *testing.T) {
 			Url:	"http://gitlab.com",
 			Token:	Token,
 			Group:	exp,
-		},
-		false)
+		},2,false)
 	assert.NotNil(t,gl.c)
 	assert.Equal(t,exp,gl.Group())
 }
@@ -64,8 +62,7 @@ func TestCreate(t *testing.T) {
 			Url:	ts.URL,
 			Token:	Token,
 			Group:	expGrp,
-		},
-		false)
+		},2,false)
 	tid, err := gl.Create(expGrp,"broken stuff","details details")
 	assert.NotNil(t,tid)
 	assert.Nil(t,err)
@@ -78,8 +75,7 @@ func TestCreateNetError(t *testing.T) {
 			Url:	"http://localhost:31001/ticket",
 			Token:	Token,
 			Group:	"test",
-		},
-		false)
+		},2,false)
 	tid, err := gl.Create("storage","disk full","disk is full")
 	assert.Nil(t,tid)
 	assert.NotNil(t,err)
@@ -105,9 +101,8 @@ func TestUpdate(t *testing.T) {
 			Url:	ts.URL,
 			Token:	Token,
 			Group:	"test",
-		},
-		false)
-	err := gl.Update(tid.NewString("paul/test:14"),"comment")
+		},2,false)
+	err := gl.Update(tid.NewString(2,"paul/test:14"),"comment")
 	assert.Nil(t,err)
 }
 
@@ -117,9 +112,8 @@ func TestUpdateNetError(t *testing.T) {
 			Url:	"http://localhost:31001/ticket",
 			Token:	Token,
 			Group:	"test",
-		},
-		false)
-	err := gl.Update(tid.NewString("prj:12"),"disk still full")
+		},2,false)
+	err := gl.Update(tid.NewString(2,"prj:12"),"disk still full")
 	assert.NotNil(t,err)
 	_, ok := err.(net.Error);
 	assert.True(t,ok)
@@ -142,9 +136,8 @@ func TestClose(t *testing.T) {
 			Url:	ts.URL,
 			Token:	Token,
 			Group:	"test",
-		},
-		false)
-	err := gl.Close(tid.NewString("paul/test:14"),"close")
+		},2,false)
+	err := gl.Close(tid.NewString(2,"paul/test:14"),"close")
 	assert.Nil(t,err)
 }
 
@@ -154,9 +147,8 @@ func TestCloseNetError(t *testing.T) {
 			Url:	"http://localhost:31001/ticket",
 			Token:	Token,
 			Group:	"test",
-		},
-		false)
-	err := gl.Close(tid.NewString("prj:12"),"fixed")
+		},2,false)
+	err := gl.Close(tid.NewString(2,"prj:12"),"fixed")
 	assert.NotNil(t,err)
 	_, ok := err.(net.Error);
 	assert.True(t,ok)

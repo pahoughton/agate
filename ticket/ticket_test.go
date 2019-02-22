@@ -4,40 +4,20 @@
 package ticket
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/amgr/alert"
-
 	"github.com/stretchr/testify/assert"
-	promp "github.com/prometheus/client_golang/prometheus"
-	pmod "github.com/prometheus/common/model"
-
+	"github.com/pahoughton/agate/config"
 )
 
 func TestNew(t *testing.T) {
-	fmt.Printf("tsys:%d\n",TSysMock)
-	for sys, v := range tsysmap {
-		if v == TSysUnknown {
-			continue
-		}
-		cfg := config.New()
-		cfg.Ticket.Default = sys
-		tobj := New(cfg.Ticket,false)
-		assert.NotNil(t,tobj)
-
-		promp.Unregister(tobj.MetrTicketsGend)
-		promp.Unregister(tobj.MetrErrors)
-	}
-
-	got := New(config.New().Ticket,false)
+	cfg := config.New()
+	got := New(cfg.Ticket,false)
 	assert.NotNil(t,got)
-	promp.Unregister(got.MetrTicketsGend)
-	promp.Unregister(got.MetrErrors)
+	got.Close()
 }
 
-func TestTSysPanic(t *testing.T) {
+func TestNewPanic(t *testing.T) {
 	assert.Panics(t, func() {
 		cfg := config.New()
 		cfg.Ticket.Default = "george"
@@ -45,7 +25,7 @@ func TestTSysPanic(t *testing.T) {
 	}, "New did not panic")
 }
 
-
+/* FIXME
 func TestAlertTSys(t *testing.T) {
 	obj := New(config.New().Ticket,false)
 
@@ -143,3 +123,4 @@ func TestAGroupTSys(t  *testing.T) {
 	promp.Unregister(obj.MetrTicketsGend)
 	promp.Unregister(obj.MetrErrors)
 }
+*/

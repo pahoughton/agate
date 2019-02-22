@@ -15,13 +15,15 @@ import (
 )
 
 type Gitlab struct {
+	tsys	uint8
 	grp		string
 	debug	bool
 	c		*gl.Client
 }
 
-func New(cfg config.TSysGitlab, dbg bool) *Gitlab {
+func New(cfg config.TSysGitlab, tsys int,dbg bool) *Gitlab {
 	g := &Gitlab{
+		tsys:	uint8(tsys),
 		grp:	cfg.Group,
 		debug:	dbg,
 		c:		gl.NewClient(nil, cfg.Token),
@@ -50,7 +52,7 @@ func (g *Gitlab)Create(prj, title, desc string, ) (*tid.Tid, error) {
 	if g.debug {
 		fmt.Printf("gitlab.CreateIssue: ret issue: %v\n",i)
 	}
-	return tid.NewString(fmt.Sprintf("%s:%d",prj,i.IID)), nil
+	return tid.NewString(g.tsys,fmt.Sprintf("%s:%d",prj,i.IID)), nil
 }
 
 func (g *Gitlab)Update(id *tid.Tid, cmt string) error {

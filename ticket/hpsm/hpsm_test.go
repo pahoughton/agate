@@ -60,8 +60,7 @@ func TestNew(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
+		},1,false)
 	assert.NotNil(t,h)
 }
 
@@ -70,8 +69,7 @@ func TestGroup(t *testing.T) {
 	h := New(
 		config.TSysHpsm{
 			Group: exp,
-		},
-		false)
+		},1,false)
 	assert.Equal(t,exp,h.Group())
 }
 
@@ -102,8 +100,7 @@ func TestCreate(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
+		},1,false)
 	tid, err := h.Create("storage","disk full","disk is full")
 
 	assert.NotNil(t,tid)
@@ -119,8 +116,7 @@ func TestCreateNetError(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
+		},1,false)
 	tid, err := h.Create("storage","disk full","disk is full")
 	assert.Nil(t,tid)
 	assert.NotNil(t,err)
@@ -154,9 +150,8 @@ func TestUpdate(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
-	err := h.Update(tid.NewString("IM1234"),"disk still full")
+		},1,false)
+	err := h.Update(tid.NewString(h.tsys,"IM1234"),"disk still full")
 	assert.Nil(t,err)
 }
 
@@ -169,9 +164,8 @@ func TestUpdateNetError(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
-	err := h.Update(tid.NewString("IM1234"),"disk still full")
+		},1,false)
+	err := h.Update(tid.NewString(1,"IM1234"),"disk still full")
 	assert.NotNil(t,err)
 	_, ok := err.(net.Error);
 	assert.True(t,ok)
@@ -203,9 +197,8 @@ func TestClose(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
-	err := h.Close(tid.NewString("IM1234"),"fixed")
+		},1,false)
+	err := h.Close(tid.NewString(1,"IM1234"),"fixed")
 	assert.Nil(t,err)
 }
 
@@ -218,9 +211,8 @@ func TestCloseNetError(t *testing.T) {
 			CreateEp: "incident2",
 			UpdateEp: "incident2",
 			CloseEp: "incident3",
-		},
-		false)
-	err := h.Close(tid.NewString("IM1234"),"fixed")
+		},1,false)
+	err := h.Close(tid.NewString(1,"IM1234"),"fixed")
 	assert.NotNil(t,err)
 	_, ok := err.(net.Error);
 	assert.True(t,ok)

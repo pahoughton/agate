@@ -19,11 +19,11 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	m := New(config.TSysMock{Url: "http://localhost:5001/ticket"},false)
+	m := New(config.TSysMock{Url: "http://localhost:5001/ticket"},0,false)
 	assert.NotNil(t,m)
 }
 func TestGroup(t *testing.T) {
-	m := New(config.TSysMock{Url: "http://localhost:5001/ticket"},false)
+	m := New(config.TSysMock{Url: "http://localhost:5001/ticket"},0,false)
 	assert.Equal(t,"",m.Group())
 }
 
@@ -47,7 +47,7 @@ func TestCreate(t *testing.T) {
 			}))
 	defer ts.Close()
 
-	m := New(config.TSysMock{Url: ts.URL},false)
+	m := New(config.TSysMock{Url: ts.URL},0,false)
 	assert.NotNil(t,m)
 	tid, err := m.Create("storage","disk full","disk is full")
 	assert.Nil(t,err)
@@ -74,14 +74,14 @@ func TestCreateSysError(t *testing.T) {
 			}))
 	defer ts.Close()
 
-	m := New(config.TSysMock{Url: ts.URL},false)
+	m := New(config.TSysMock{Url: ts.URL},0,false)
 	assert.Panics(t, func() {
 		m.Create("storage","disk full","disk is full")
 	}, "create bad resp should panic")
 }
 
 func TestCreateNetError(t *testing.T) {
-	m := New(config.TSysMock{Url: "http://localhost:31001/ticket"},false)
+	m := New(config.TSysMock{Url: "http://localhost:31001/ticket"},0,false)
 	assert.NotNil(t,m)
 	tid, err := m.Create("storage","disk full","disk is full")
 	assert.Nil(t,tid)
@@ -107,16 +107,16 @@ func TestUpdate(t *testing.T) {
 			}))
 	defer ts.Close()
 
-	m := New(config.TSysMock{Url: ts.URL},false)
+	m := New(config.TSysMock{Url: ts.URL},0,false)
 	assert.NotNil(t,m)
-	err := m.Update(tid.NewString("12"),"disk still full")
+	err := m.Update(tid.NewString(1,"12"),"disk still full")
 	assert.Nil(t,err)
 }
 
 func TestUpdateNetError(t *testing.T) {
-	m := New(config.TSysMock{Url: "http://localhost:31001/ticket"},false)
+	m := New(config.TSysMock{Url: "http://localhost:31001/ticket"},0,false)
 	assert.NotNil(t,m)
-	err := m.Update(tid.NewString("12"),"disk still full")
+	err := m.Update(tid.NewString(0,"12"),"disk still full")
 	assert.NotNil(t,err)
 	_, ok := err.(net.Error);
 	assert.True(t,ok)
@@ -139,16 +139,16 @@ func TestClose(t *testing.T) {
 			}))
 	defer ts.Close()
 
-	m := New(config.TSysMock{Url: ts.URL},false)
+	m := New(config.TSysMock{Url: ts.URL},0,false)
 	assert.NotNil(t,m)
-	err := m.Close(tid.NewString("12"),"fixed")
+	err := m.Close(tid.NewString(0,"12"),"fixed")
 	assert.Nil(t,err)
 }
 
 func TestCloseNetError(t *testing.T) {
-	m := New(config.TSysMock{Url: "http://localhost:31001/ticket"},false)
+	m := New(config.TSysMock{Url: "http://localhost:31001/ticket"},0,false)
 	assert.NotNil(t,m)
-	err := m.Close(tid.NewString("12"),"fixed")
+	err := m.Close(tid.NewString(0,"12"),"fixed")
 	assert.NotNil(t,err)
 	_, ok := err.(net.Error);
 	assert.True(t,ok)

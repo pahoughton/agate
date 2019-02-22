@@ -35,6 +35,7 @@ const (
 )
 
 type Hpsm struct {
+	tsys		uint8
 	grp			string
 	debug		bool
 	BaseUrl		string
@@ -180,8 +181,9 @@ type In3RespIncident struct {
 	IncidentID	string		`xml:"IncidentID,omitempty"`
 }
 
-func New(cfg config.TSysHpsm, dbg bool) *Hpsm {
+func New(cfg config.TSysHpsm, tsys int, dbg bool) *Hpsm {
 	h := &Hpsm{
+		tsys:		uint8(tsys),
 		debug:		dbg,
 		grp:		cfg.Group,
 		BaseUrl:	cfg.Url,
@@ -313,7 +315,7 @@ func (h *Hpsm) Create(wg, title, desc string) (*tid.Tid, error) {
 	if h.debug {
 		fmt.Println("hpsm create ID: "+respEnv.Body.Resp.Incident.IncidentID)
 	}
-	return tid.NewString(respEnv.Body.Resp.Incident.IncidentID), nil
+	return tid.NewString(h.tsys,respEnv.Body.Resp.Incident.IncidentID), nil
 
 }
 

@@ -8,15 +8,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 func TestNewBytes(t *testing.T) {
-	exp := []byte("secret-sauce")
+	expsys := uint8(3)
+	expstr := "secret-sauce"
+	exp := append([]byte(expstr),byte(expsys))
 	got := NewBytes(exp)
 	assert.Equal(t,exp,got.Bytes())
-	assert.Equal(t,string(exp),got.String())
+	assert.Equal(t,expstr,got.String())
+	assert.Equal(t,uint(expsys),got.Sys())
 }
 
 func TestNewString(t *testing.T) {
+	expsys := uint8(16)
 	exp := "secret-sauce"
-	got := NewString(exp)
+	got := NewString(expsys,exp)
 	assert.Equal(t,exp,got.String())
-	assert.Equal(t,[]byte(exp),got.Bytes())
+	assert.Equal(t,uint(expsys),got.Sys())
+	assert.Equal(t,append([]byte(exp),byte(expsys)),got.Bytes())
 }

@@ -15,12 +15,14 @@ import (
 )
 
 type Mock struct {
+	tsys	uint8
 	debug	bool
 	url		string
 }
 
-func New(cfg config.TSysMock, debug bool) *Mock {
+func New(cfg config.TSysMock,tsys int,debug bool) *Mock {
 	return &Mock{
+		tsys:	uint8(tsys),
 		debug:	debug,
 		url:	cfg.Url,
 	}
@@ -73,7 +75,7 @@ func (m *Mock)Create(grp,title,desc string) (*tid.Tid, error) {
 		panic(fmt.Errorf("no ticket id %v",rmap))
 	}
 
-	return tid.NewString(id), nil
+	return tid.NewString(m.tsys,id), nil
 }
 
 func (m *Mock)Update(tid *tid.Tid, cmt string) error {
