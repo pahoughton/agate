@@ -1,0 +1,9 @@
+# 2019-02-22 (cc) <paul4hough@gmail.com>
+#
+---
+
+- name: "remed {{testfn}}"
+  copy:
+    content: |
+      "test"
+    dest: "{{testfn}}"

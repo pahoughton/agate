@@ -1,7 +1,7 @@
 /* 2018-12-25 (cc) <paul4hough@gmail.com>
    process alert script remediation
 */
-package proc
+package remed
 
 import (
 	"fmt"
@@ -17,26 +17,32 @@ import (
 )
 
 
-func (p *Proc)Script(node string, labels pmod.LabelSet) (string, error) {
+func (r *Remed)Script(node string, labels pmod.LabelSet) (string, error) {
 
+	aname, ok := labels["alertname"]
+	if ! ok {
+		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
+	}
 	lfile, err := ioutil.TempFile("/tmp",node)
 	if err != nil {
-		return "", fmt.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(lfile.Name())
 
 	lyml, err := yaml.Marshal(labels)
 	if err != nil {
-		return "", fmt.Errorf("yaml.Marshal - %s\n%v",err,labels)
+		return "", r.Errorf("yaml.Marshal - %s\n%v",err,labels)
 	}
 	if _, err := lfile.Write(lyml); err != nil {
-		return "", fmt.Errorf("Write: %s",err.Error())
+		return "", r.Errorf("Write: %s",err.Error())
 	}
 	if err := lfile.Close(); err != nil {
-		return "", fmt.Errorf("Close: %s",err.Error())
+		return "", r.Errorf("Close: %s",err.Error())
 	}
-
-	scriptfn := filepath.Join(p.ScriptsDir,string(labels["alertname"]))
+	if r.debug {
+		os.Setenv("DEBUG","1")
+	}
+	scriptfn := filepath.Join(r.scriptsDir,string(string(aname)))
 
 	cmdargs := []string{node,lfile.Name()}
 
@@ -50,22 +56,22 @@ func (p *Proc)Script(node string, labels pmod.LabelSet) (string, error) {
 		cmdstatus = "success"
 	}
 
-	tcom := fmt.Sprintf("command: %s %v",scriptfn,cmdargs)
-	tcom += "results: " + cmdstatus + "\n"
+	out := fmt.Sprintf("command: %s %v",scriptfn,cmdargs)
+	out += "\nresults: " + cmdstatus + "\n"
 	if err != nil {
-		tcom += "cmd error: " + err.Error() + "\n"
+		out += "cmd error: " + err.Error() + "\n"
 	}
-	tcom += "output:\n" + string(cmdout)
+	out += "output: |\n" + string(cmdout)
 
-	if p.Debug {
-		fmt.Printf("DEBUG: script %v\noutput: %s\n",cmdargs,cmdout)
+	if r.debug {
+		fmt.Printf("DEBUG: script out: |\n%v",out)
 	}
 
-	p.ScriptsRun.With(
+	r.metrics.scripts.With(
 		promp.Labels{
 			"script": string(labels["alertname"]),
 			"status": cmdstatus,
 		}).Inc()
 
-	return tcom, err
+	return out, err
 }

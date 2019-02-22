@@ -1,7 +1,7 @@
 /* 2018-12-25 (cc) <paul4hough@gmail.com>
    process alert ansible remediation
 */
-package proc
+package remed
 
 import (
 	"fmt"
@@ -14,24 +14,28 @@ import (
 )
 
 
-func (p *Proc)Ansible( node string, labels pmod.LabelSet) (string, error) {
+func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 
+	aname, ok := labels["alertname"]
+	if ! ok {
+		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
+	}
 	// create inventory file for ansible
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
-		return "", fmt.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(invfile.Name())
 	if _, err := invfile.WriteString(node + "\n"); err != nil {
-		return "", fmt.Errorf("WriteString: %s",err.Error())
+		return "", r.Errorf("WriteString: %s",err.Error())
 	}
 	if err := invfile.Close(); err != nil {
-		return "", fmt.Errorf("Close: %s",err.Error())
+		return "", r.Errorf("Close: %s",err.Error())
 	}
 
-	pbfile, err := ioutil.TempFile(p.PlaybookDir,node)
+	pbfile, err := ioutil.TempFile(r.playbookDir,node)
 	if err != nil {
-		return "", fmt.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(pbfile.Name())
 	pbvars := "  vars:\n"
@@ -46,18 +50,18 @@ func (p *Proc)Ansible( node string, labels pmod.LabelSet) (string, error) {
     - "{{ agate_role }}"
 `
 	if _, err := pbfile.WriteString(pbcont); err != nil {
-		return "", fmt.Errorf("WriteString: %s",err.Error())
+		return "", r.Errorf("WriteString: %s",err.Error())
 	}
 	if err := pbfile.Close(); err != nil {
-		return "", fmt.Errorf("Close: %s",err.Error())
+		return "", r.Errorf("Close: %s",err.Error())
 	}
 
-	if p.Debug {
+	if r.debug {
 		fmt.Printf("proc.Ansible-playbook:\n%s\n",pbcont)
 	}
 	cmdargs := []string{"-i", invfile.Name(),"-e"}
 
-	arole := "agate_role=" + string(labels["alertname"])
+	arole := "agate_role=" + string(aname)
 
 	cmdargs = append(cmdargs,arole,pbfile.Name())
 
@@ -71,22 +75,22 @@ func (p *Proc)Ansible( node string, labels pmod.LabelSet) (string, error) {
 		cmdstatus = "success"
 	}
 
-	tcom := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
-	tcom += "results: " + cmdstatus + "\n"
+	out := fmt.Sprintf("command: anisble-playbook %v",cmdargs)
+	out += "results: " + cmdstatus + "\n"
 	if err != nil {
-		tcom += "cmd error: " + err.Error() + "\n"
+		out += "cmd error: " + err.Error() + "\n"
 	}
-	tcom += "output:\n" + string(cmdout)
+	out += "output:\n" + string(cmdout)
 
-	if p.Debug {
+	if r.debug {
 		fmt.Printf("DEBUG: ansible-playbook %v\noutput: %s\n",cmdargs,cmdout)
 	}
 
-	p.AnsiblePlays.With(
+	r.metrics.ansible.With(
 		promp.Labels{
 			"role": string(labels["alertname"]),
 			"status": cmdstatus,
 		}).Inc()
 
-	return tcom, err
+	return out, err
 }
