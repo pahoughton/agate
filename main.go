@@ -1,4 +1,4 @@
-/* 2018-12-25 (cc) <paul4hough@gmail.com>
+ /* 2018-12-25 (cc) <paul4hough@gmail.com>
    agate entry point
 */
 package main

@@ -9,6 +9,21 @@ tickets, executing ansible roles and running scripts.
 
 under development - see wip branch
 
+### ci/cd phase 2
+
+cent-vm:
+COMMAND - REDIRECT!:)! - sys a [group, alert, ...] to sys b :)
+COMAND Supress [alertname, blah]
+
+alert: app-agate-alert-rate
+expr: >-
+agate_alert_total[1m] >  10
+[5m] > 20
+[10m] > 40
+action: crank up innibition / summarization halt alerting
+
+Hardening
+
 ## usage
 
 ```
@@ -33,7 +48,15 @@ Prometheus metrics are available via http://hostname:port/metrics,
 
 See [config.good.full.yml](../master/config/testdata/config.good.full.yml)
 
+### metric alerts
+
+expr: *_errors_total > 0 require ping or restart to recover
+
 ### labels
+
+nginx push server - Why not open ftp endpoint. I'll even accept samba mount.
+* ticket_sys
+* ticket_grp
 
 for use by alertmanager alert grouping
 

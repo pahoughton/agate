@@ -17,8 +17,12 @@ task :yamllint do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
 end
 
-task :test => [:yamllint] do
-  sh 'cd config && go test -mod=vendor'
+task :test, [:name] => [:yamllint] do |tasks, args|
+  if args[:name]
+    sh "cd #{args[:name]} && go test -v ./..."
+  else
+    sh 'go test -v ./...'
+  end
 end
 
 task :build do
@@ -84,6 +88,5 @@ end
 
 task :travis do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
-  sh 'cd config && go test'
-  sh 'go build'
+  sh 'go test -v ./...'
 end
