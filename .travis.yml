@@ -13,6 +13,7 @@ before_script:
   - uname -a
   - env
   - sudo pip install yamllint
+  - sudo pip install ansible
 
 script:
   - rake travis
