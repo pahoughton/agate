@@ -12,6 +12,7 @@ go:
 before_script:
   - uname -a
   - env
+  - echo StrictHostKeyChecking no > .ssh/config
   - sudo pip install yamllint
   - sudo pip install ansible
 
