@@ -24,6 +24,39 @@ func TestNewPanic(t *testing.T) {
 		New(cfg.Ticket,false)
 	}, "New did not panic")
 }
+func TestSink(t *testing.T) {
+	cfg := config.New()
+	obj := New(cfg.Ticket,false)
+	assert.NotNil(t,t)
+	got := obj.Sink(TSysMock)
+	assert.NotNil(t,got)
+	assert.NotNil(t,got.Group())
+	got = obj.Sink(TSysUnknown)
+	assert.Nil(t,got)
+
+	obj.Close()
+}
+
+func TestGroup(t *testing.T) {
+	cfg := config.New()
+	obj := New(cfg.Ticket,false)
+	assert.NotNil(t,t)
+	got := obj.Group(TSysMock)
+	assert.Equal(t,got,"")
+	obj.Close()
+
+	exp := "agate-test"
+	cfg.Ticket.Sys.Gitlab.Group = exp
+	cfg.Ticket.Sys.Hpsm.Group = exp + "hpsm"
+	obj = New(cfg.Ticket,false)
+	assert.NotNil(t,t)
+
+	assert.Equal(t,exp,obj.Group(TSysGitlab))
+	assert.Equal(t,exp + "hpsm",obj.Group(TSysHpsm))
+	obj.Close()
+
+}
+
 
 /* FIXME
 func TestAlertTSys(t *testing.T) {

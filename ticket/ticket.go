@@ -56,9 +56,9 @@ func (t TSys) String() string {
 }
 
 type TicketSink interface {
-	Create(goup, title, desc string) (*tid.Tid, error)
-	Update(tid *tid.Tid, desc string) error
-	Close(tid *tid.Tid, desc string) error
+	Create(goup, title, desc string) (tid.Tid, error)
+	Update(tid tid.Tid, desc string) error
+	Close(tid tid.Tid, desc string) error
 	Group() string
 }
 
@@ -116,6 +116,15 @@ func New(cfg config.Ticket, dbg bool) *Ticket {
 	return t
 }
 
+func (t *Ticket) NewTSysString(s string) TSys {
+	if v, ok := tsysmap[s]; ok {
+		return v
+	} else {
+		return t.Default
+	}
+}
+
+
 func (t *Ticket) Close() {
 	t.unregister()
 }
@@ -132,7 +141,7 @@ func (t *Ticket) unregister() {
 }
 func (t *Ticket) Sink(s TSys) TicketSink {
 
-	if TSysUnknown < s || s >= TSysMock {
+	if TSysMock <= s && s < TSysUnknown {
 		return t.sinks[s]
 	} else {
 		return nil
@@ -145,6 +154,42 @@ func (t *Ticket) Group(s TSys) string {
 	} else {
 		return "invalid"
 	}
+}
+
+func (t *Ticket) TCreate(s TSys, grp, title,desc string) tid.Tid {
+	if t.Sink(s) != nil {
+		stid, err := t.Sink(s).Create(grp,title,desc)
+		if err == nil {
+			return stid
+		} else if t.debug  {
+			panic(err)
+		}
+	}
+	return nil
+}
+
+func (t *Ticket) TUpdate(id tid.Tid, msg string) bool {
+	if t.Sink(TSys(id.Sys())) != nil {
+		err := t.Sink(TSys(id.Sys())).Update(id,msg)
+		if err == nil {
+			return true
+		} else if t.debug  {
+			panic(err)
+		}
+	}
+	return false
+}
+
+func (t *Ticket) TClose(id tid.Tid, msg string) bool {
+	if t.Sink(TSys(id.Sys())) != nil {
+		err := t.Sink(TSys(id.Sys())).Close(id,msg)
+		if err == nil {
+			return true
+		} else if t.debug  {
+			panic(err)
+		}
+	}
+	return false
 }
 
 func (t *Ticket) Errorf(format string, args ...interface{}) error {

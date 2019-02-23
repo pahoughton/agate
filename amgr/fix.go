@@ -3,40 +3,26 @@
 */
 package amgr
 
-func (am *Amgr)Fix(a *alert.Alert,tid string,multi bool) {
+import (
+	"github.com/pahoughton/agate/amgr/alert"
+)
+func (am *Amgr)Fix(a alert.Alert) string {
 
-	aname = a.Name()
-	node = a.Node()
+	out := ""
 
-	ardir := path.Join(am.proc.PlaybookDir,"roles",aname)
-	finfo, err := os.Stat(ardir)
-	if err == nil && finfo.IsDir() {
-		emsg := ""
-		out, err := am.proc.Ansible(node,a.Labels)
-		if err != nil {
-			emsg = "ERROR: " + err.Error() + "\n"
-			am.Error("ansible - " + err.Error() + "\n")
-		}
-		tcom := "ansible remediation results\n" + emsg + out
-
-		if err = am.ticket.Comment(a,tid,tcom,multi); err != nil {
-			am.Error(fmt.Sprintf("ticket add comment: %s\n%s",err,tcom))
+	if am.remed.AnsibleAvail(a.Labels) {
+		if tmp, err := am.remed.Ansible(a.Node(),a.Labels); err != nil {
+			am.Error(err)
+		} else {
+			out += tmp
 		}
 	}
-
-	sfn := path.Join(am.proc.ScriptsDir,aname)
-	finfo, err = os.Stat(sfn)
-	if err == nil && (finfo.Mode() & 0111) != 0 {
-		emsg := ""
-		out, err := am.proc.Script(node,a.Labels)
-		if err != nil {
-			emsg = "ERROR: " + err.Error() + "\n"
-			am.Error("script - " + err.Error() + "\n")
-		}
-		tcom := "script remediation results\n" + emsg + out
-
-		if err = am.ticket.Comment(a,tid,tcom,multi); err != nil {
-			am.Error(fmt.Sprintf("ticket add comment: %s\n%s",err,tcom))
+	if am.remed.ScriptAvail(a.Labels) {
+		if tmp, err := am.remed.Script(a.Node(),a.Labels); err != nil {
+			am.Error(err)
+		} else {
+			out += tmp
 		}
 	}
+	return out
 }

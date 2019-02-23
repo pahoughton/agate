@@ -6,15 +6,17 @@ package config
 import (
 	"io/ioutil"
 	"path"
+	"time"
 	"gopkg.in/yaml.v2"
 
 	"github.com/imdario/mergo"
 )
 type Global struct {
-	Listen				string	`yaml:"listen,omitempty"`
-	DataAge				uint	`yaml:"data-age,omitempty"`
-	CfgScriptsDir		string	`yaml:"scripts-dir,omitempty"`
-	CfgPlaybookDir		string	`yaml:"playbook-dir,omitempty"`
+	Listen				string			`yaml:"listen,omitempty"`
+	Retry				time.Duration	`yaml:"retry,omitempty"`
+	DataAge				uint			`yaml:"data-age,omitempty"`
+	CfgScriptsDir		string			`yaml:"scripts-dir,omitempty"`
+	CfgPlaybookDir		string			`yaml:"playbook-dir,omitempty"`
 	// derived
 	ScriptsDir			string
 	PlaybookDir			string
@@ -84,7 +86,8 @@ func New() (*Config) {
 	}
 }
 
-func (cfg *Config)Load(fn string) (*Config, error) {
+func Load(fn string) (*Config, error) {
+	cfg := New()
 	ycfg := &Config{}
 	if dat, err := ioutil.ReadFile(fn); err == nil {
 		if 	err = yaml.UnmarshalStrict(dat, ycfg); err == nil {

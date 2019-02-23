@@ -5,11 +5,11 @@ Single AlertGroup Queue Manager Thread
 package amgr
 
 import (
-	"sync"
+	"time"
 )
-
-type Manager {
-	c	chan
+type Manager struct {
+	c	chan bool
+	q	chan bool
 }
 func NewManager() *Manager {
 	return &Manager{c: make(chan bool)}
@@ -23,29 +23,34 @@ func (m *Manager) Notify(t time.Duration) {
 	}
 }
 
-func (am *Amgr)Manage() {
+func (m *Manager) Quit() {
+	select {
+	case m.q <- true:
+	case <- time.After(1):
+	}
+}
+
+func (am *Amgr) Manage() {
 
 	for {
 		// grab array of queue keys
-		agq := a.db.AGroupQueue()
+		agq := am.db.AGroupQueue()
 
 		if len(agq) < 1 {
 			// wait for next alert, double check queue every 10 min
 			select {
-			case <- am.qmgr.c
-			case <- time.After(10 * time.Minute):
+			case <- am.qmgr.c:
+			case <- am.qmgr.q:
+				return
+			case <- time.After(am.retry):
+			}
+		} else {
+			for _, id := range agq {
+				if am.Respond(id) == false {
+					time.Sleep(am.retry)
+					break;
+				}
 			}
 		}
-
-		var wg sync.WaitGroup
-		for _, agqkey := range agq {
-			am.procq <- agkey
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				am.Respond(agqkey)
-			}
-		}
-		wg.Wait()
 	}
 }

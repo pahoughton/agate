@@ -3,10 +3,8 @@
 */
 package gitlab
 import (
-	"fmt"
 	"testing"
 	"net"
-	"net/http"
 	"net/http/httptest"
 
 	"github.com/stretchr/testify/assert"
@@ -45,28 +43,21 @@ func TestGroup(t *testing.T) {
 
 
 func TestCreate(t *testing.T) {
-	respJson := `{"id":1, "iid":14, "title" : "Title of issue",
-"description": "This is description of an issue",
-"author" : {"id" : 1, "name": "snehal"}, "assignees":[{"id":1}]}`
-
-	ts := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, respJson)
-	}))
-	defer ts.Close()
+	mock := NewMockServer()
+	ms := httptest.NewServer(mock)
+	defer ms.Close()
 
 	expGrp := "paul/test"
 	gl := New(
 		config.TSysGitlab{
-			Url:	ts.URL,
+			Url:	ms.URL,
 			Token:	Token,
 			Group:	expGrp,
 		},2,false)
 	tid, err := gl.Create(expGrp,"broken stuff","details details")
 	assert.NotNil(t,tid)
 	assert.Nil(t,err)
-	assert.Equal(t,expGrp + ":14",tid.String())
+	assert.Equal(t,expGrp + ":1",tid.String())
 }
 
 func TestCreateNetError(t *testing.T) {
@@ -85,20 +76,13 @@ func TestCreateNetError(t *testing.T) {
 
 
 func TestUpdate(t *testing.T) {
-	respJson := `{"id":1, "iid":14, "title" : "Title of issue",
-"description": "This is description of an issue",
-"author" : {"id" : 1, "name": "snehal"}, "assignees":[{"id":1}]}`
-
-	ts := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, respJson)
-	}))
-	defer ts.Close()
+	mock := NewMockServer()
+	ms := httptest.NewServer(mock)
+	defer ms.Close()
 
 	gl := New(
 		config.TSysGitlab{
-			Url:	ts.URL,
+			Url:	ms.URL,
 			Token:	Token,
 			Group:	"test",
 		},2,false)
@@ -120,20 +104,13 @@ func TestUpdateNetError(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	respJson := `{"id":1, "iid":14, "title" : "Title of issue",
-"description": "This is description of an issue",
-"author" : {"id" : 1, "name": "snehal"}, "assignees":[{"id":1}]}`
-
-	ts := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, respJson)
-	}))
-	defer ts.Close()
+	mock := NewMockServer()
+	ms := httptest.NewServer(mock)
+	defer ms.Close()
 
 	gl := New(
 		config.TSysGitlab{
-			Url:	ts.URL,
+			Url:	ms.URL,
 			Token:	Token,
 			Group:	"test",
 		},2,false)

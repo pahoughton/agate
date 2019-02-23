@@ -6,9 +6,15 @@ package amgr
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"github.com/pahoughton/agate/config"
+
 )
 
-func Test(t *testing.T) {
-	am := New(config.New(),false)
-	assert.NotNil(am)
+func TestNew(t *testing.T) {
+	got := New(config.New(),"testdata/data",false)
+	assert.NotNil(t,got)
+	got.Close()
+	got = New(config.New(),"testdata/data",false)
+	assert.NotNil(t,got)
+	got.Close()
 }

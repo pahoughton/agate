@@ -4,9 +4,7 @@
 package mock
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -28,31 +26,16 @@ func TestGroup(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
-	respJson := `{"id":"23"}`
+	mock := &MockServer{}
+	msrv := httptest.NewServer(mock)
+	defer msrv.Close()
 
-	ts := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				cont, err := ioutil.ReadAll(r.Body);
-				if err != nil {
-					t.Error("readall")
-					return
-				}
-				var dat map[string]string
-				if err := json.Unmarshal(cont, &dat); err != nil {
-					t.Error("json.Unmarshal")
-					return
-				}
-				fmt.Fprintln(w, respJson)
-			}))
-	defer ts.Close()
-
-	m := New(config.TSysMock{Url: ts.URL},0,false)
+	m := New(config.TSysMock{Url: msrv.URL},0,false)
 	assert.NotNil(t,m)
 	tid, err := m.Create("storage","disk full","disk is full")
 	assert.Nil(t,err)
 	assert.NotNil(t,tid)
-	assert.Equal(t,"23",tid.String())
+	assert.Equal(t,"1",tid.String())
 }
 func TestCreateSysError(t *testing.T) {
 	respJson := `garbage`
@@ -60,16 +43,6 @@ func TestCreateSysError(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				cont, err := ioutil.ReadAll(r.Body);
-				if err != nil {
-					t.Error("readall")
-					return
-				}
-				var dat map[string]string
-				if err := json.Unmarshal(cont, &dat); err != nil {
-					t.Error("json.Unmarshal")
-					return
-				}
 				fmt.Fprintln(w, respJson)
 			}))
 	defer ts.Close()
@@ -91,23 +64,11 @@ func TestCreateNetError(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	ts := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				cont, err := ioutil.ReadAll(r.Body);
-				if err != nil {
-					t.Error("readall")
-					return
-				}
-				var dat map[string]string
-				if err := json.Unmarshal(cont, &dat); err != nil {
-					t.Error("json.Unmarshal")
-					return
-				}
-			}))
-	defer ts.Close()
+	mock := &MockServer{}
+	msrv := httptest.NewServer(mock)
+	defer msrv.Close()
 
-	m := New(config.TSysMock{Url: ts.URL},0,false)
+	m := New(config.TSysMock{Url: msrv.URL},0,false)
 	assert.NotNil(t,m)
 	err := m.Update(tid.NewString(1,"12"),"disk still full")
 	assert.Nil(t,err)
@@ -123,23 +84,11 @@ func TestUpdateNetError(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	ts := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				cont, err := ioutil.ReadAll(r.Body);
-				if err != nil {
-					t.Error("readall")
-					return
-				}
-				var dat map[string]string
-				if err := json.Unmarshal(cont, &dat); err != nil {
-					t.Error("json.Unmarshal")
-					return
-				}
-			}))
-	defer ts.Close()
+	mock := &MockServer{}
+	msrv := httptest.NewServer(mock)
+	defer msrv.Close()
 
-	m := New(config.TSysMock{Url: ts.URL},0,false)
+	m := New(config.TSysMock{Url: msrv.URL},0,false)
 	assert.NotNil(t,m)
 	err := m.Close(tid.NewString(0,"12"),"fixed")
 	assert.Nil(t,err)

@@ -275,7 +275,7 @@ func (h *Hpsm) PostSoap(url, sact string, reqObj, resp interface{}) error {
 
 }
 
-func (h *Hpsm) Create(wg, title, desc string) (*tid.Tid, error) {
+func (h *Hpsm) Create(wg, title, desc string) (tid.Tid, error) {
 
 	ir := &CreateIncidentRequest{
 		Incident:	In2ReqIncident{
@@ -319,7 +319,7 @@ func (h *Hpsm) Create(wg, title, desc string) (*tid.Tid, error) {
 
 }
 
-func (h *Hpsm)Update(id *tid.Tid, cmt string) error {
+func (h *Hpsm)Update(id tid.Tid, cmt string) error {
 
 	ir := UpdateIncidentRequest{
 		Incident:	In2ReqIncident{
@@ -352,7 +352,7 @@ func (h *Hpsm)Update(id *tid.Tid, cmt string) error {
 	return nil
 }
 
-func (h *Hpsm)Close(id *tid.Tid, cmt string) error {
+func (h *Hpsm)Close(id tid.Tid, cmt string) error {
 
 	ir := CloseIncidentRequest{
 		Incident:	Incident3{

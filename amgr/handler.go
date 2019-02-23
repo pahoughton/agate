@@ -4,6 +4,12 @@
 */
 package amgr
 
+import (
+	"io/ioutil"
+	"net/http"
+	promp "github.com/prometheus/client_golang/prometheus"
+)
+
 func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 
 	resStr := r.FormValue("resolve")
@@ -14,19 +20,17 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 	} else {
 		resStr = "false"
 	}
-	am.metrics.Recvd.With(promp.Labels{"resolve":resStr}).Inc()
+	am.metrics.groups.With(promp.Labels{"resolve":resStr}).Inc()
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		if am.debug {
 			panic(err)
 		} else {
-			am.ErrorMesg(err,"amgr.ServeHTTP: ioutil.ReadAll")
+			am.Error(err)
 		}
 		return
 	}
-	if err := am.db.AgroupAdd(b,resolve); err != nil {
-		panic(err)
-	}
-	am.manager.Notify(1)
+	am.db.AGroupAdd(b,resolve)
+	am.qmgr.Notify(1)
 }

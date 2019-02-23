@@ -39,22 +39,22 @@ ticket-sys:
 }
 
 func TestLoadMissing(t *testing.T) {
-	c, err := New().Load("not-a-file")
+	c, err := Load("not-a-file")
 	assert.Error(t,err)
 	assert.Nil(t,c)
 }
 func TestLoadBad(t *testing.T) {
-	c, err := New().Load("testdata/bad.yml")
+	c, err := Load("testdata/bad.yml")
 	assert.Error(t,err)
 	assert.Nil(t,c)
 }
 func TestLoadBadCont(t *testing.T) {
-	c, err := New().Load("testdata/bad-cont.yml")
+	c, err := Load("testdata/bad-cont.yml")
 	assert.Error(t,err)
 	assert.Nil(t,c)
 }
 func TestLoadMin(t *testing.T) {
-	got, err := New().Load("testdata/good-min.yml")
+	got, err := Load("testdata/good-min.yml")
 	assert.Nil(t,err)
 	assert.NotNil(t,got)
 	exp := New()
@@ -112,7 +112,7 @@ func TestLoadFull(t *testing.T) {
 	} else {
 		assert.Nil(t,err)
 	}
-	got, err := New().Load("testdata/good-full.yml")
+	got, err := Load("testdata/good-full.yml")
 	assert.Nil(t,err)
 	assert.NotNil(t,got)
 

@@ -3,25 +3,31 @@
 */
 package tid
 
-type Tid struct {
+type Tid interface {
+	String() string
+	Sys() uint
+	Bytes() []byte
+}
+
+type data struct {
 	str		string
 	sys	uint8
 }
 
 
-func NewBytes(id []byte) *Tid {
-	return &Tid{ str: string(id[:len(id)-1]), sys: id[len(id)-1], }
+func NewBytes(id []byte) *data {
+	return &data{ str: string(id[:len(id)-1]), sys: id[len(id)-1], }
 }
-func NewString(tsys uint8,id string) *Tid {
-	return &Tid{id,tsys}
+func NewString(tsys uint8,id string) *data {
+	return &data{id,tsys}
 }
 
-func (t *Tid) String() string {
+func (t *data) String() string {
 	return t.str
 }
-func (t *Tid) Sys() uint {
+func (t *data) Sys() uint {
 	return uint(t.sys)
 }
-func (t *Tid) Bytes() []byte {
+func (t *data) Bytes() []byte {
 	return append([]byte(t.str),byte(t.sys))
 }

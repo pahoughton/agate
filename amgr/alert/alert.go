@@ -28,9 +28,9 @@ type AlertGroup struct {
 	ExtURL		string			`json:"externalURL"`
 	GroupKey	string			`json:"groupKey"`
 	Alerts		[]Alert			`json:"alerts"`
-	ComAnnots	LabelMap	`json:"commonAnnotations,omitempty"`
-	ComLabels	LabelMap	`json:"commonLabels,omitempty"`
-	GroupLabels	LabelMap	`json:"groupLabels,omitempty"`
+	ComAnnots	pmod.LabelSet	`json:"commonAnnotations,omitempty"`
+	ComLabels	pmod.LabelSet	`json:"commonLabels,omitempty"`
+	GroupLabels	pmod.LabelSet	`json:"groupLabels,omitempty"`
 }
 
 var (
@@ -51,11 +51,11 @@ var (
 )
 func (a *Alert) Key() []byte {
 	if b, err := a.StartsAt.MarshalBinary(); err == nil {
-		k := make([]byte,binary.MaxVarintLen64,
-			binary.MaxVarintLen64 +
-			len(b)+(len(b) % binary.MaxVarintLen64))
-		binary.PutUvarint(k,uint64(a.Fingerprint()))
-		return(append(k,b...))
+		k := make([]byte,len(b),len(b)+binary.MaxVarintLen64)
+		copy(k,b)
+		fp := make([]byte,binary.MaxVarintLen64)
+		fn := binary.PutUvarint(fp,uint64(a.Fingerprint()))
+		return append(k,fp[:fn]...)
 	} else {
 		panic(err)
 	}
@@ -80,6 +80,21 @@ func (lm *LabelMap)SortedKeys() pmod.LabelNames {
 
 	sort.Sort(lkeys)
 	return lkeys
+}
+
+func (a *Alert) Node() string {
+	keys := pmod.LabelNames{"agate_node", "hostname", "instance"}
+	for _, k := range keys {
+		if v, ok := a.Labels[k]; ok {
+			node := string(v)
+			if i := strings.IndexRune(node,':'); i > 0 {
+				return node[:i]
+			} else {
+				return node
+			}
+		}
+	}
+	return ""
 }
 
 func (a *Alert) Title() string {

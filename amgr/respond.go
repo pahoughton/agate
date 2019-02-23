@@ -28,62 +28,74 @@ respond to an amgr alerg group
 */
 package amgr
 
+import (
+	// "bytes"
+	"encoding/json"
+	"fmt"
+	promp "github.com/prometheus/client_golang/prometheus"
+	"github.com/pahoughton/agate/amgr/alert"
+	// "github.com/pahoughton/agate/ticket"
+	"github.com/pahoughton/agate/ticket/tid"
+)
+
 type NewAlert struct {
 	agidx	int
 	remed	bool
 }
 
-func (am *Amgr)Respond(agqkey uint64) {
+func (am *Amgr)Respond(agqkey uint64) bool {
 
 	// retrieve json
 	ag := am.db.AGroupGet(agqkey)
 	if ag == nil {
-		return
+		return true
 	}
-	if a.debug {
+	/*
+	if am.debug {
 		var dbgbuf bytes.Buffer
 		if err := json.Indent(&dbgbuf, ag.Json, "", "  "); err != nil {
-			fmt.Printf("DEBUG json.Indent: ",err.Error())
+			fmt.Println("DEBUG json.Indent: ",err.Error())
 		} else {
 			fmt.Println("DEBUG agrp\n",dbgbuf.String())
 		}
 	}
+    */
 	// unmarshal
 	var agrp alert.AlertGroup
 	if err := json.Unmarshal(ag.Json, &agrp); err != nil {
 		panic(fmt.Sprintf(
-			"json.Unmarshal agrp: %s\n%v",err.Error(),agrcv.Json))
+			"json.Unmarshal agrp: %s\n%v",err.Error(),ag.Json))
 	}
 	if len(agrp.Alerts) < 1 {
 		panic("0 alerts in alertgroup")
 	}
 
-	tid := (*tid.Tid)nil
+	var agtid tid.Tid
 	newAlerts := make([]NewAlert,0,len(agrp.Alerts))
 	resolvedAlerts := make([]int,0,len(agrp.Alerts))
 	anyRemed := false
 	resolveCount := 0
 
-	tsyscnt = make(map[string]int,len(agrp.Alerts))
-	tgrpcnt = make(map[string]int,len(agrp.Alerts))
+	tsyscnt := make(map[string]int,len(agrp.Alerts))
+	tgrpcnt := make(map[string]int,len(agrp.Alerts))
 
 	// alerts:
 	for agidx, a := range agrp.Alerts {
-
-		atid := am.db.AlertTid(a.StartsAt, a.Key())
+		//fmt.Printf(" alert %v %v\n",a.StartsAt,a.Key())
+		atid := am.db.AlertGet(a.StartsAt, a.Key())
 		// ? new alert group
 		if atid != nil {
-			tid = atid
+			agtid = tid.NewBytes(atid)
 		}
 		// ? firing:
-		if a.Status == 'firing' {
+		if a.Status == "firing" {
 
 			aname := a.Name()
 
 			// ? new
 			if atid != nil {
 				continue
-			} else if tid == nil {
+			} else if agtid == nil {
 				// ? Labels[ticket_sys]
 				if v, ok := a.Labels["ticket_sys"]; ok {
 					tsyscnt[string(v)] += 1
@@ -94,41 +106,32 @@ func (am *Amgr)Respond(agqkey uint64) {
 				}
 			}
 			resolve := "false"
-			if agq.Resolv {
+			if ag.Resolve {
 				resolve = "true"
 			}
-			am.metrics.Alerts.With(
+			am.metrics.alerts.With(
 				promp.Labels{
 					"name": aname,
 					"node": a.Node(),
-					"resolve": resolve
+					"resolve": resolve,
 				}).Inc()
 
 			// ? Remediate
 			remed := false
 			if aname == "unknown" {
-				am.Error("alert missing alertname")
+				am.Errorf("alert missing alertname")
 			} else {
-				sfn := path.Join(h.proc.ScriptsDir,aname)
-				finfo, err = os.Stat(sfn)
-				if err == nil && (finfo.Mode() & 0111) != 0 {
-					remed = true
-				} else {
-					ardir := path.Join(h.proc.PlaybookDir,"roles",aname)
-					finfo, err := os.Stat(ardir)
-					if err == nil && finfo.IsDir() {
-						remed = true
-					}
-				}
+				remed = remed || am.remed.AnsibleAvail(a.Labels)
+				remed = remed || am.remed.ScriptAvail(a.Labels)
 			}
-			anyRemed ||= remed
+			anyRemed = anyRemed || remed
 			newAlerts = append(newAlerts,
-				&NewAlert{
+				NewAlert{
 					agidx: agidx,
 					remed: remed,
 				})
 
-		} else if a.Status == 'resolved' {
+		} else if a.Status == "resolved" {
 			// ? resolved
 			resolveCount += 1
 			if atid != nil {
@@ -136,32 +139,31 @@ func (am *Amgr)Respond(agqkey uint64) {
 				resolvedAlerts = append(resolvedAlerts,agidx)
 			}
 		} else {
-			am.Error("unknown status: " + a.Status " "+ a.Title())
+			am.Errorf("unknown status: %v - %v",a.Status,a.Title())
 		}
 	}
-
 	// ? ticket.Create
-	if tid == nil {
-
+	if agtid == nil {
 		// ticket system(gitlab,mock,...) to use
-		tsys := am.t.Default
+		tsysStr := am.ticket.Default.String()
 		if v, ok := agrp.ComLabels["ticket_sys"]; ok {
-			tsys = ticket.NewTSys(string(v))
+			tsysStr = string(v)
 		} else {
-			majTSys := am.t.Default.String()
+			majTSys := tsysStr
 			majCount := 0
 			for k, c := range tsyscnt {
 				if c > majCount {
-					majTSys = ticket.NewTSys(k)
+					majTSys = k
 					majCount = c
 				}
 			}
-			tsys = majTSys
+			tsysStr = majTSys
 		}
+		tsys := am.ticket.NewTSysString(tsysStr)
 		// ticket group to use
-		tgrp := am.t.Group(tsys)
+		tgrp := am.ticket.Group(tsys)
 		if v, ok :=  agrp.ComLabels["ticket_grp"]; ok {
-			tgrp = v
+			tgrp = string(v)
 		} else {
 			majTGrp := tgrp
 			majCount := 0
@@ -179,17 +181,18 @@ func (am *Amgr)Respond(agqkey uint64) {
 		} else {
 			hdr += "remediation: none\n\n"
 		}
-		if agq.Resolve {
+		if ag.Resolve {
 			hdr += "close: auto\n\n"
 		} else {
 			hdr += "close: manual\n\n"
 		}
-		tid = am.t.Create(tsys, tgrp, ag.Title(), hdr + ag.Desc())
-		// db.update
-		if ag.Resolve {
-			for _, a := range agrp.Alerts {
-				am.db.AlertAdd(a.StartsAt,a.Key(),tid.Bytes())
-			}
+		agtid = am.ticket.TCreate(tsys,tgrp,agrp.Title(),hdr + agrp.Desc())
+		if agtid == nil {
+			return false// abort
+		}
+		// db.update - need for dup detection
+		for _, a := range agrp.Alerts {
+			am.db.AlertAdd(a.StartsAt,a.Key(),agtid.Bytes())
 		}
 	} else if len(newAlerts) > 0 {
 		// - ? new alerts
@@ -199,34 +202,51 @@ func (am *Amgr)Respond(agqkey uint64) {
 			msg += agrp.Alerts[a.agidx].Desc() + "\n"
 		}
 		// ticket.Update
-		am.ticket.Update(tid, msg)
+		if am.ticket.TUpdate(agtid, msg) == false {
+			return false
+		}
 	}
 	// ? remediate
 	for _, a := range newAlerts {
 		if a.remed {
 			// fix
-			am.ticket.Update(tid,am.remed.Fix(agrp[a.agidx]))
+			out := am.Fix(agrp.Alerts[a.agidx])
+			if am.ticket.TUpdate(agtid,out) == false {
+				am.Errorf("remed ticket(%s) update\n%v",agtid.String(),out)
+				return false
+			}
 		}
 	}
 	// new resolved
 	if len(resolvedAlerts) > 0 {
 		msg := "\n"
 		for _, agidx := range resolvedAlerts {
-			a = agrp.Alerts[agidx]
+			a := agrp.Alerts[agidx]
 			msg += "resolved: " + a.Title() + "\n"
 			// db.update
 			am.db.AlertDel(a.StartsAt,a.Key())
 		}
-		// ticket.Update
-		am.ticket.Update(tid,msg)
 		// ? all resolved
 		if resolveCount >= len(agrp.Alerts) {
-			am.ticket.Update(tid,"\nAll Alerts Resolved\n")
+			msg += "\nAll Alerts Resolved\n"
 			if am.ticket.CloseResolved {
 				// ticket.Close
-				am.ticket.Close(tid)
+				if am.ticket.TClose(agtid,msg) == false {
+					return false
+				}
+			} else {
+				if am.ticket.TUpdate(agtid,msg) == false {
+					return false
+				}
+			}
+		} else {
+			// ticket.Update
+			if am.ticket.TUpdate(agtid,msg) == false {
+				return false
+			}
 		}
 	}
 	// - db update
-	a.db.AGroupDel(agqkey)
+	am.db.AGroupDel(agqkey)
+	return true
 }

@@ -31,6 +31,44 @@ mountpoint: /home/paul/wip/maul/prom-poc/testdata/mnt
 maulnode: cbed
 `
 )
+
+func TestNode(t *testing.T) {
+	a := Alert{}
+	a.Labels = pmod.LabelSet{}
+	assert.Equal(t,"",a.Node())
+
+	exp := "alert"
+	expl := pmod.LabelValue(exp)
+	a.Labels = pmod.LabelSet{ "agate_node": expl }
+	assert.Equal(t,exp,a.Node())
+	a.Labels = pmod.LabelSet{ "hostname": expl }
+	assert.Equal(t,exp,a.Node())
+	a.Labels = pmod.LabelSet{ "instance": pmod.LabelValue(exp+":9100") }
+	assert.Equal(t,exp,a.Node())
+	a.Labels = pmod.LabelSet{
+		"agate_node": expl,
+		"hostname": "not-exp",
+	}
+	assert.Equal(t,exp,a.Node())
+	a.Labels = pmod.LabelSet{
+		"agate_node": expl,
+		"instance": "not-exp:9100",
+	}
+	assert.Equal(t,exp,a.Node())
+	a.Labels = pmod.LabelSet{
+		"agate_node": expl,
+		"hostname": "notexp",
+		"instance": "notexp:9100",
+	}
+	assert.Equal(t,exp,a.Node())
+	a.Labels = pmod.LabelSet{
+		"hostname": expl,
+		"instance": "notexp:9100",
+	}
+	assert.Equal(t,exp,a.Node())
+}
+
+
 /*
 var (
 	SortedLabelNames = pmod.LabelNames{

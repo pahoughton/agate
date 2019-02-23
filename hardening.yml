@@ -1,0 +1,146 @@
+# 2019-02-17 (cc) <paul4hough@gmail.com>
+#
+---
+Why: .-
+How: UbU
+Who: '!:)!'
+When: yesterday
+
+Vendor priority alignment - my/our priortys reduce cost; short contracts;
+
+people > vendor
+open vendor + people > people
+sf cost, shared time
+sf value ... ROFL
+
+to: dl :)
+subject: graphic UbU
+
+Enjoy !:)!
+
+
+
+
+
+UbU: the u-Bee-u Bee grafic - contest
+
+ted finn *= ted paul
+  - contributors list
+
+** += **^**
+
+
+
+
+Those with give a .*itis are sought after ...
+
+operator ++ (n) { for n := 0.0; ; n++ { n+=n^n } }
+
+
+
+Why - dot-dash
+How - UbU
+Who - :)
+
+for dot-dash = 100, maul = 2; maul > (dot-dash / 40; ++ maul {
+  sleep 7 * 24 * 60 * 60
+}
+
+dot-dash:
+  dnr: maul - it not gentel
+  p: ?
+
+
+
+a: 1, 5, 10, 20, 40, 80, 120, n year company
+y: !:)!
+
+it's where your going !:)!
+
+func export(term) how { return if term == 'ccu' ; return UbU !:)! }
+
+validation is the path to automated chanage management
+
+prove-it is first nature
+
+join me in the next iteration
+
+security anylizzer integration - o my
+
+go big or go home
+
+conditions:
+  down:
+    - hardware:
+        consul_metric: node gone
+
+    - exporters:
+        metric: up
+
+    - component:
+        list:
+          - prometheus
+          - alertmanager
+          - grafana
+          - blackbox_exporter
+          - vmware_exporter
+          - agate
+        detect: cross cluster scraping
+
+    - downstream:
+        ticket-sys:
+          - hpsm
+          - gitlab
+          - mock
+          - ...
+        detect:
+          - blackbox
+          - agate
+        responce:
+          agate:
+            - persistent outbound queue:
+                queue max - weeks - save and panic
+            - retry: for n hours
+            - report
+            - repeat
+  noisy:
+    responce: amtool inhibition and supression
+    detection: alertmanager scrapes
+    responce: alert excessive
+
+    cloudera top level api alert inibited by low level alerts.
+
+    label:
+      team: cloudera
+      cluster: abc
+          alert: cloudera_api_error
+
+redirect - o my
+
+          metrics w/ retry
+
+    - consumer: see above
+
+  dest ticket system down:
+    - metric: bbox_ping{ ... }
+      bbox: snarf status
+      scrape_freeq: 15min
+      alert:
+        - tsys down
+      alert:
+    - metric: agate_ticket_sys_down{ name = "gitlab|hpsm|mock|george"}
+      agate:
+        responces:
+          - metric.Incr()
+          - log details
+          - respond:
+              - agate_tsys_retry{ name, since="" }
+              - retry 10m
+      alert:
+        - tsys_retry > 12 # still down after 12 hours - pay attention
+
+  * exporter down:
+    - metric: up
+
+  node down:
+    metric: consul

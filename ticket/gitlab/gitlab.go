@@ -36,7 +36,7 @@ func (g *Gitlab)Group() string {
 	return g.grp
 }
 
-func (g *Gitlab)Create(prj, title, desc string, ) (*tid.Tid, error) {
+func (g *Gitlab)Create(prj, title, desc string, ) (tid.Tid, error) {
 
 	i, resp, err := g.c.Issues.CreateIssue(prj,&gl.CreateIssueOptions{
 		Title: gl.String(title),
@@ -55,7 +55,7 @@ func (g *Gitlab)Create(prj, title, desc string, ) (*tid.Tid, error) {
 	return tid.NewString(g.tsys,fmt.Sprintf("%s:%d",prj,i.IID)), nil
 }
 
-func (g *Gitlab)Update(id *tid.Tid, cmt string) error {
+func (g *Gitlab)Update(id tid.Tid, cmt string) error {
 
 	tida := strings.Split(id.String(),":")
 	prj := tida[0]
@@ -89,7 +89,7 @@ func (g *Gitlab)Update(id *tid.Tid, cmt string) error {
 	return nil
 }
 
-func (g *Gitlab)Close(id *tid.Tid, cmt string) error {
+func (g *Gitlab)Close(id tid.Tid, cmt string) error {
 
 	if len(cmt) > 0 {
 		g.Update(id,cmt)

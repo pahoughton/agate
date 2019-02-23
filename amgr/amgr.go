@@ -5,25 +5,16 @@
 package amgr
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"path"
-	"strings"
+	"time"
 
-	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/ticket"
-	"github.com/pahoughton/agate/remed"
-	"github.com/pahoughton/agate/db"
-
-	pmod "github.com/prometheus/common/model"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 
+	"github.com/pahoughton/agate/config"
+ 	"github.com/pahoughton/agate/ticket"
+	"github.com/pahoughton/agate/remed"
+	"github.com/pahoughton/agate/db"
 )
 
 const (
@@ -31,63 +22,97 @@ const (
 )
 
 type Metrics struct {
-    Recvd	*promp.CounterVec
-	Alerts	*promp.CounterVec
-	Errors	promp.Counter
+    groups	*promp.CounterVec
+	alerts	*promp.CounterVec
+	errors	promp.Counter
 }
 
 
 type Amgr struct {
-	debug			bool
-	db				*db.DB
-	ticket			*ticket.Ticket
-	remed			*remed.Remed
-	qmgr			*Manager
-	respq			chan
-	metrics			Metrics
+	debug	bool
+	retry	time.Duration
+	db		*db.DB
+	ticket	*ticket.Ticket
+	remed	*remed.Remed
+	qmgr	*Manager
+	metrics	Metrics
 }
 
 func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 
-	adb, err := db.Open(dataDir, 0664, c.MaxDays);
+	adb, err := db.New(dataDir, 0664, c.Global.DataAge,dbg);
 	if err != nil {
 		panic(err)
 	}
 	am := &Amgr{
 		debug:		dbg,
 		db:			adb,
+		retry:		c.Global.Retry,
 		ticket:		ticket.New(c.Ticket,dbg),
 		remed:		remed.New(c.Global,dbg),
 
 		metrics: Metrics{
-			Recvd: proma.NewCounter(
+			groups: proma.NewCounterVec(
 				promp.CounterOpts{
 					Namespace: "agate",
-					Name:      "agroup_received_total",
+					Subsystem:	"amgr",
+					Name:      "groups_recvd",
 					Help:      "number of alert groups received",
-				}),
-			Alerts: proma.NewCounterVec(
+				},[]string{"resolve"}),
+			alerts: proma.NewCounterVec(
 				promp.CounterOpts{
 					Namespace: "agate",
-					Name:      "alerts_received_total",
+					Subsystem:	"amgr",
+					Name:      "alerts_recvd",
 					Help:      "number of alerts received",
 				}, []string{
 					"name",
 					"node",
+					"resolve",
 				}),
-			Errors: proma.NewCounter(
+			errors: proma.NewCounter(
 				promp.CounterOpts{
 					Namespace: "agate",
-					Name:      "amgr_errors_total",
+					Subsystem:	"amgr",
+					Name:      "errors",
 					Help:      "number of amgr errors",
 				}),
 		},
 	}
 	am.qmgr = NewManager()
-	am.respq = make(chan uint64)
-	go am.Manage()
 	return am
 }
+
+func (am *Amgr) unregister() {
+	if am.metrics.groups != nil {
+		promp.Unregister(am.metrics.groups)
+		am.metrics.groups = nil
+	}
+	if am.metrics.alerts != nil {
+		promp.Unregister(am.metrics.alerts)
+		am.metrics.alerts = nil
+	}
+	if am.metrics.errors != nil {
+		promp.Unregister(am.metrics.errors)
+		am.metrics.errors = nil
+	}
+}
+func (am *Amgr) Close() {
+	am.ticket.Close()
+	am.remed.Close()
+	am.db.Close()
+	am.unregister()
+}
+func (am *Amgr) Errorf(format string, args ...interface{}) error {
+	am.metrics.errors.Inc()
+	return fmt.Errorf(format,args...)
+}
+func (am *Amgr) Error(err error) {
+	am.metrics.errors.Inc()
+	fmt.Println("ERROR: ",err.Error())
+	if am.debug { panic(err); }
+}
+
 /*
 func (h *Handler)AlertQueueManager() {
 

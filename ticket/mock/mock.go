@@ -32,7 +32,7 @@ func (m *Mock)Group() string {
 	return ""
 }
 
-func (m *Mock)Create(grp,title,desc string) (*tid.Tid, error) {
+func (m *Mock)Create(grp,title,desc string) (tid.Tid, error) {
 
 	tckt := map[string]string{
 		"title":	title,
@@ -78,7 +78,7 @@ func (m *Mock)Create(grp,title,desc string) (*tid.Tid, error) {
 	return tid.NewString(m.tsys,id), nil
 }
 
-func (m *Mock)Update(tid *tid.Tid, cmt string) error {
+func (m *Mock)Update(tid tid.Tid, cmt string) error {
 
 	tmap := map[string]string{
 		"id": tid.String(),
@@ -108,7 +108,7 @@ func (m *Mock)Update(tid *tid.Tid, cmt string) error {
 	return nil
 }
 
-func (m *Mock)Close(tid *tid.Tid, cmt string) error {
+func (m *Mock)Close(tid tid.Tid, cmt string) error {
 
 	if len(cmt) > 0 {
 		m.Update(tid,cmt)

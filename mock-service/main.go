@@ -42,7 +42,7 @@ func handleAny(
 			if atype == "application/json" {
 				var dbgbuf bytes.Buffer
 				if err := json.Indent(&dbgbuf, b, "", "  "); err != nil {
-					output += fmt.Sprintf("ERROR json.Indent: ",err.Error())
+					output += fmt.Sprintf("ERROR json.Indent: %s",err.Error())
 				} else {
 					output += dbgbuf.String()
 					jsonOut = true
