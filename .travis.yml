@@ -14,9 +14,7 @@ before_script:
   - env
   - pwd
   - ls
-  - mkdir ~/.ssh
-  - chmod 0700 ~/.ssh
-  - echo StrictHostKeyChecking no > ~/.ssh/config
+  - echo StrictHostKeyChecking no >> ~/.ssh/config
   - chmod 0600 ~/.ssh/config
   - sudo pip install yamllint
   - sudo pip install ansible
