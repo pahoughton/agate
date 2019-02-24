@@ -73,12 +73,13 @@ func main() {
 		os.Setenv("DEBUG","true")
 	}
 
-	amhandler := amgr.New(cfg,*args.DataDir,*args.Debug)
+	am := amgr.New(cfg,*args.DataDir,*args.Debug)
 
 	fmt.Println(os.Args[0]," listening on ",*args.Listen)
+	go am.Manage()
 
 	http.Handle("/metrics",promh.Handler())
-	http.Handle("/alerts",amhandler)
+	http.Handle("/alerts",am)
 
 	fmt.Println("FATAL: ",http.ListenAndServe(*args.Listen,nil).Error())
 	os.Exit(1)
