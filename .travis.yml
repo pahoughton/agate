@@ -12,10 +12,12 @@ go:
 before_script:
   - uname -a
   - env
-  - mkdir .ssh
-  - chmod 0700 .ssh
-  - echo StrictHostKeyChecking no > .ssh/config
-  - chmod 0600 .ssh/config
+  - pwd
+  - ls
+  - mkdir ~/.ssh
+  - chmod 0700 ~/.ssh
+  - echo StrictHostKeyChecking no > ~/.ssh/config
+  - chmod 0600 ~/.ssh/config
   - sudo pip install yamllint
   - sudo pip install ansible
 
