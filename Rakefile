@@ -28,6 +28,14 @@ end
 task :build do
   sh 'go build -mod=vendor'
   sh 'cd mock-ticket && go build -mod=vendor'
+  sh 'cd mock-service && go build -mod=vendor'
+end
+
+task :vup do
+  sh 'cd test && vagrant up'
+end
+task :vprov do
+  sh 'cd test && vagrant provision'
 end
 
 task :build_static do
