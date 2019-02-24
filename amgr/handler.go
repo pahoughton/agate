@@ -12,6 +12,16 @@ import (
 
 func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		if am.debug {
+			panic(err)
+		} else {
+			am.Error(err)
+		}
+		w.WriteHeader(500)
+		return
+	}
 	resStr := r.FormValue("resolve")
 	resolve := false
 	if len(resStr) > 0 {
@@ -22,15 +32,11 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 	}
 	am.metrics.groups.With(promp.Labels{"resolve":resStr}).Inc()
 
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		if am.debug {
-			panic(err)
-		} else {
-			am.Error(err)
-		}
-		return
+	if len(b) > 0 {
+		am.db.AGroupAdd(b,resolve)
+		am.qmgr.Notify(1)
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(500)
 	}
-	am.db.AGroupAdd(b,resolve)
-	am.qmgr.Notify(1)
 }
