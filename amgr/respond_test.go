@@ -51,7 +51,7 @@ func queueAGroups(t *testing.T, am *Amgr,ags ...alert.AlertGroup) {
 func TestRespond(t *testing.T) {
 	os.Remove("testdata/data/agate.bolt")
 
-	today := time.Now()
+	today, _ := time.Parse(time.RFC3339, "2019-02-20T13:12:11Z")
 	cfg := config.New()
 	tsys := TSys{
 		hpsm: &hpsm.MockServer{},
@@ -218,7 +218,6 @@ func TestRespond(t *testing.T) {
 		assert.True(t,am.Respond(qid))
 		assert.Equal(t,len(agq)-(i+1),len(am.db.AGroupQueue()))
 		assert.Equal(t,mtid+i+1,tsys.mock.Tid)
-
 		for _, a := range aglist[i].Alerts {
 			got := am.db.AlertGet(a.StartsAt,a.Key())
 			assert.NotNil(t,got)
