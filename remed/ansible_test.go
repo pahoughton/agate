@@ -37,7 +37,7 @@ func TestAnsible(t *testing.T) {
 	cfg := config.New()
 	cfg.Global.PlaybookDir = "testdata/playbook"
 
-	obj := New(cfg.Global,true)
+	obj := New(cfg.Global,false)
 	assert.NotNil(t,obj)
 
 	tfn := pmod.LabelValue("/tmp/test-agate-ansible")
