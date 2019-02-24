@@ -1,0 +1,14 @@
+# 2019-02-23 (cc) <paul4hough@gmail.com>
+#
+---
+- name: agate go test node
+  hosts: test
+
+  roles:
+    - name: go
+      become: true
+      role: go
+
+  tasks:
+    - import_tasks: tasks-base.yml
+    - import_tasks: tasks-test.yml

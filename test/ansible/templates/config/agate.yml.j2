@@ -1,17 +1,13 @@
 # 2019-01-08 (cc) <paul4hough@gmail.com>  -*- yaml -*-
 #
 ---
-listen-addr: ":{{ port_agate }}"
-ticket-default-sys: mock
-ticket-default-grp: pahoughton/agate
-max-days: 15
-close-resolved: true
-gitlab-url: https://gitlab.com/api/v4
-gitlab-token: {{ gitlab_token }}
-hpsm-base-url: https://hpsm/apiv3
-hpsm-create-ep: incident2
-hpsm-update-ep: incident2
-hpsm-close-ep: incident3
-hpsm-user: hpsm
-hpsm-pass: {{ hpsm_pass }}
-mock-ticket-url: http://localhost:{{ port_mock_ticket }}/ticket
+global:
+  listen: ":{{ port_agate }}"
+  data-age: 5
+  scripts-dir: "{{ remed_dir }}/scripts"
+  playbook-dir: "{{ remed_dir }}/playbook"
+ticket-sys:
+  close-resolved: true
+  systems:
+    mock:
+      url: http://localhost:{{ port_mock_ticket }}/ticket
