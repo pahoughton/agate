@@ -59,16 +59,6 @@ func (a *Alert) Key() []byte {
 	} else {
 		panic(err)
 	}
-
-	/*
-	k := make([]byte,0,binary.Size(time.Time{}) + binary.Size(a.Fingerprint))
-
-		panic(err)
-	} else {
-		binary.PutUvarint(k,uint64(a.Fingerprint()))
-		return append(k,b...)
-	}
-*/
 }
 
 func (lm *LabelMap)SortedKeys() pmod.LabelNames {
