@@ -81,7 +81,7 @@ func (am *Amgr)Respond(agqkey uint64) bool {
 
 	// alerts:
 	for agidx, a := range agrp.Alerts {
-		//fmt.Printf(" alert %v %v\n",a.StartsAt,a.Key())
+
 		atid := am.db.AlertGet(a.StartsAt, a.Key())
 		// ? new alert group
 		if atid != nil {
