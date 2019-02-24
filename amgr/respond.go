@@ -64,7 +64,8 @@ func (am *Amgr)Respond(agqkey uint64) bool {
 	var agrp alert.AlertGroup
 	if err := json.Unmarshal(ag.Json, &agrp); err != nil {
 		panic(fmt.Sprintf(
-			"json.Unmarshal agrp: %s\n%v",err.Error(),ag.Json))
+			"json.Unmarshal agrp: %s\nlen: %d\n%v\n",
+			err.Error(),len(ag.Json),ag.Json))
 	}
 	if len(agrp.Alerts) < 1 {
 		panic("0 alerts in alertgroup")
