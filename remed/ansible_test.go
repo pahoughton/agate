@@ -41,7 +41,7 @@ func TestAnsible(t *testing.T) {
 	got, err := obj.Ansible("localhost", labels)
 	assert.Nil(t,err)
 	if err != nil && len(got) > 0 && obj.debug { print("\n"+got+"\n") }
-	assert.Regexp(t,"agate-fail",got)
+	assert.Regexp(t,"PLAY",got)
 
 	assert.FileExists(t,string(tfn))
 	buf,err := ioutil.ReadFile(string(tfn))
