@@ -32,16 +32,17 @@ func TestAnsible(t *testing.T) {
 	cfg := config.New()
 	cfg.Global.PlaybookDir = "testdata/playbook"
 
-	r := New(cfg.Global,false)
-	assert.NotNil(t,r)
+	obj := New(cfg.Global,false)
+	assert.NotNil(t,obj)
 
 	tfn := pmod.LabelValue("/tmp/test-agate-ansible")
 	os.Remove(string(tfn))
 	labels := pmod.LabelSet{"alertname": "remed","testfn": tfn}
-	got, err := r.Ansible("localhost", labels)
+	got, err := obj.Ansible("localhost", labels)
 	assert.Nil(t,err)
-	assert.NotNil(t,got)
-	//print("\n"+got+"\n")
+	if err != nil && len(got) > 0 && obj.debug { print("\n"+got+"\n") }
+	assert.Regexp(t,"agate-fail",got)
+
 	assert.FileExists(t,string(tfn))
 	buf,err := ioutil.ReadFile(string(tfn))
 	assert.Nil(t,err)
@@ -50,12 +51,12 @@ func TestAnsible(t *testing.T) {
 	os.Remove(string(tfn))
 
 	labels = pmod.LabelSet{}
-	got, err = r.Ansible("localhost", labels)
+	got, err = obj.Ansible("localhost", labels)
 	assert.NotNil(t,err)
 
 	labels = pmod.LabelSet{"alertname": "invalid"}
-	got, err = r.Ansible("localhost", labels)
+	got, err = obj.Ansible("localhost", labels)
 	assert.NotNil(t,err)
 
-	r.Close()
+	obj.Close()
 }
