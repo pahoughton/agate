@@ -5,7 +5,7 @@
 - name: install packages
   become: true
   package:
-    name: [git, rubygem-rake,ansible]
+    name: [git, rubygem-rake, ansible]
     state: present
 
 - name: add /usr/local/go/bin to path
