@@ -147,10 +147,13 @@ func (ag *AlertGroup) Title() string {
 	return title
 }
 
+const (
+	atimefmt = "2006-01-02 15:04:05.9999 -0700"
+)
 func (a *Alert) Desc() string {
 
 	desc := "\nFrom: " + a.GeneratorURL + "\n\n"
-	desc += "When: " + a.StartsAt.String() + "\n"
+	desc += "When: " + a.StartsAt.Format(atimefmt) + "\n"
 
 	keys := make(pmod.LabelNames, 0, len(a.Annotations))
 	for k, _ := range a.Annotations {
