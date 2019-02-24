@@ -5,6 +5,7 @@ Single AlertGroup Queue Manager Thread
 package amgr
 
 import (
+	"os"
 	"time"
 )
 type Manager struct {
@@ -12,7 +13,7 @@ type Manager struct {
 	q	chan bool
 }
 func NewManager() *Manager {
-	return &Manager{c: make(chan bool)}
+	return &Manager{c: make(chan bool), q: make(chan bool)}
 }
 
 func (m *Manager) Notify(t time.Duration) {
@@ -35,13 +36,12 @@ func (am *Amgr) Manage() {
 	for {
 		// grab array of queue keys
 		agq := am.db.AGroupQueue()
-
 		if len(agq) < 1 {
 			// wait for next alert, double check queue every 10 min
 			select {
 			case <- am.qmgr.c:
 			case <- am.qmgr.q:
-				return
+				os.Exit(0)
 			case <- time.After(am.retry):
 			}
 		} else {
