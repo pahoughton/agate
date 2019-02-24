@@ -32,7 +32,7 @@ func TestAnsible(t *testing.T) {
 	cfg := config.New()
 	cfg.Global.PlaybookDir = "testdata/playbook"
 
-	obj := New(cfg.Global,false)
+	obj := New(cfg.Global,true)
 	assert.NotNil(t,obj)
 
 	tfn := pmod.LabelValue("/tmp/test-agate-ansible")
@@ -40,8 +40,8 @@ func TestAnsible(t *testing.T) {
 	labels := pmod.LabelSet{"alertname": "remed","testfn": tfn}
 	got, err := obj.Ansible("localhost", labels)
 	assert.Nil(t,err)
-	if err != nil && len(got) > 0 && obj.debug { print("\n"+got+"\n") }
-	assert.Regexp(t,"PLAY",got)
+	if err != nil && len(got) > 0 { print("\nERRgot: "+got+"\n") }
+	assert.Regexp(t,"failed=0",got)
 
 	assert.FileExists(t,string(tfn))
 	buf,err := ioutil.ReadFile(string(tfn))
