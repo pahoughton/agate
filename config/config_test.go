@@ -4,9 +4,8 @@
 package config
 
 import (
-//	"fmt"
-//	"strings"
 	"testing"
+	"time"
 	"gopkg.in/yaml.v2"
 
 	"github.com/stretchr/testify/assert"
@@ -15,9 +14,9 @@ func TestNewConfig(t *testing.T) {
 	c := New()
 	got, err := yaml.Marshal(c)
 	assert.Nil(t,err)
-	// print(string(got))
 
 	exp := `global:
+  retry: 10m0s
   data-age: 15
   scripts-dir: scripts
   playbook-dir: playbook
@@ -32,7 +31,7 @@ ticket-sys:
       repo: ""
       token: ""
     mock:
-      url: http://localhost:6102
+      url: http://localhost:6102/ticket
 `
 	assert.Equal(t,exp,string(got))
 }
@@ -64,13 +63,16 @@ func TestLoadMin(t *testing.T) {
 	assert.Equal(t,exp,got)
 }
 func TestLoadFull(t *testing.T) {
+	expRetry, err := time.ParseDuration("1h")
+	assert.Nil(t,err)
 	exp :=  &Config{
 		Global: Global{
-			DataAge: 30,
-			CfgScriptsDir: "/sdiff",
-			CfgPlaybookDir: "/pdiff",
-			ScriptsDir: "/sdiff",
-			PlaybookDir: "/pdiff",
+			Retry:			expRetry,
+			DataAge:		30,
+			CfgScriptsDir:	"/sdiff",
+			CfgPlaybookDir:	"/pdiff",
+			ScriptsDir:		"/sdiff",
+			PlaybookDir:	"/pdiff",
 		},
 		Email: Email{
 			Smtp: "localhost:25",
@@ -105,11 +107,9 @@ func TestLoadFull(t *testing.T) {
 			},
 		},
 	}
-	if _, err := yaml.Marshal(exp); err == nil {
-		// print(string(yml))
-	} else {
-		assert.Nil(t,err)
-	}
+	_, err = yaml.Marshal(exp)
+	assert.Nil(t,err)
+
 	got, err := Load("testdata/good-full.yml")
 	assert.Nil(t,err)
 	assert.NotNil(t,got)

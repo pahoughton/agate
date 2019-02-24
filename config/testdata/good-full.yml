@@ -2,6 +2,7 @@
 #
 ---
 global:
+  retry: 1h
   data-age: 30
   scripts-dir: /sdiff
   playbook-dir: /pdiff
