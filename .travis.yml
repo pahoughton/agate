@@ -16,6 +16,7 @@ before_script:
   - ls
   - echo StrictHostKeyChecking no >> ~/.ssh/config
   - chmod 0600 ~/.ssh/config
+  - ssh-keygen -t rsa -q -N ''
   - cat .ssh/id_rsa.pub >> ~/.ssh/authorized_keys
   - sudo pip install yamllint
   - sudo pip install ansible
