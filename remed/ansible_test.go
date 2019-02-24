@@ -29,6 +29,11 @@ func TestAnsibleAvail(t *testing.T) {
 }
 
 func TestAnsible(t *testing.T) {
+	if len(os.Getenv("TRAVIS")) > 1 {
+		// travis can't ssh localhost for ansible test
+		print("travis skip\n")
+		return
+	}
 	cfg := config.New()
 	cfg.Global.PlaybookDir = "testdata/playbook"
 
