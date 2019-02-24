@@ -12,7 +12,6 @@ import (
 	"github.com/imdario/mergo"
 )
 type Global struct {
-	Listen				string			`yaml:"listen,omitempty"`
 	Retry				time.Duration	`yaml:"retry,omitempty"`
 	DataAge				uint			`yaml:"data-age,omitempty"`
 	CfgScriptsDir		string			`yaml:"scripts-dir,omitempty"`
@@ -66,8 +65,8 @@ func New() (*Config) {
 	return &Config {
 		// defaults
 		Global: Global{
-			Listen: "6101",
 			DataAge: 15,
+			Retry: time.Duration(10 * time.Minute),
 			CfgScriptsDir: "scripts",
 			CfgPlaybookDir: "playbook",
 		},
@@ -79,7 +78,7 @@ func New() (*Config) {
 					Url: "https://gitlab.com",
 				},
 				Mock: TSysMock{
-					Url: "http://localhost:6102",
+					Url: "http://localhost:6102/ticket",
 				},
 			},
 		},

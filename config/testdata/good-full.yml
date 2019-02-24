@@ -2,12 +2,9 @@
 #
 ---
 global:
-  listen: 127.0.0.1:4464
   data-age: 30
   scripts-dir: /sdiff
   playbook-dir: /pdiff
-  scriptsdir: /sdiff
-  playbookdir: /pdiff
 email:
   smtp: localhost:25
   from: agate@nowhere

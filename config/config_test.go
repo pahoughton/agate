@@ -18,7 +18,6 @@ func TestNewConfig(t *testing.T) {
 	// print(string(got))
 
 	exp := `global:
-  listen: "6101"
   data-age: 15
   scripts-dir: scripts
   playbook-dir: playbook
@@ -67,7 +66,6 @@ func TestLoadMin(t *testing.T) {
 func TestLoadFull(t *testing.T) {
 	exp :=  &Config{
 		Global: Global{
-			Listen: "127.0.0.1:4464",
 			DataAge: 30,
 			CfgScriptsDir: "/sdiff",
 			CfgPlaybookDir: "/pdiff",
