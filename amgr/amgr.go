@@ -47,6 +47,7 @@ func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 	am := &Amgr{
 		debug:		dbg,
 		db:			adb,
+		qmgr:		NewManager(),
 		retry:		c.Global.Retry,
 		ticket:		ticket.New(c.Ticket,dbg),
 		remed:		remed.New(c.Global,dbg),
@@ -79,7 +80,6 @@ func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 				}),
 		},
 	}
-	am.qmgr = NewManager()
 	return am
 }
 
