@@ -1,5 +1,10 @@
 /* 2018-12-25 (cc) <paul4hough@gmail.com>
-   process alert ansible remediation
+
+process alert ansible remediation
+- create inventory file w/ node
+- create playbook with variables from labels
+- run ansible role
+- return output
 */
 package remed
 
@@ -27,7 +32,7 @@ func (r *Remed) AnsibleAvail(labels pmod.LabelSet) bool {
 
 func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 
-	aname, ok := labels["alertname"]
+	aname, ok := string(labels["alertname"])
 	if ! ok {
 		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
 	}
@@ -45,6 +50,7 @@ func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 		return "", r.Errorf("Close: %s",err.Error())
 	}
 
+	// create playbook
 	pbfile, err := ioutil.TempFile(r.playbookDir,node)
 	if err != nil {
 		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
@@ -61,6 +67,8 @@ func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
   roles:
     - "{{ agate_role }}"
 `
+	if r.debug {fmt.Printf("proc.Ansible-playbook:\n%s\n",pbcont)}
+
 	if _, err := pbfile.WriteString(pbcont); err != nil {
 		return "", r.Errorf("WriteString: %s",err.Error())
 	}
@@ -68,14 +76,9 @@ func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 		return "", r.Errorf("Close: %s",err.Error())
 	}
 
-	if r.debug {
-		fmt.Printf("proc.Ansible-playbook:\n%s\n",pbcont)
-	}
-	cmdargs := []string{"-i", invfile.Name(),"-e"}
+	arole := "agate_role=" + aname
 
-	arole := "agate_role=" + string(aname)
-
-	cmdargs = append(cmdargs,arole,pbfile.Name())
+	cmdargs := []string{"-i",invfile.Name(),"-e",arole,pbfile.Name()}
 
 	cmdout, err := exec.Command("ansible-playbook",cmdargs...).CombinedOutput()
 
@@ -99,10 +102,7 @@ func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 	}
 
 	r.metrics.ansible.With(
-		promp.Labels{
-			"role": string(labels["alertname"]),
-			"status": cmdstatus,
-		}).Inc()
+		promp.Labels{"role": aname,"status": cmdstatus}).Inc()
 
 	return out, err
 }
