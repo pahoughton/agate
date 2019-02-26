@@ -7,7 +7,6 @@ at_exit {
   puts "run time: #{runtime}"
 }
 
-
 task :default do
   sh 'rake --tasks'
   exit 1

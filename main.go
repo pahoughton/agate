@@ -59,6 +59,10 @@ func main() {
 		Debug:		app.Flag("debug","debug output to stdout").Bool(),
 	}
 
+	debug := false
+	if args.Debug != nil && *args.Debug {
+		debug = true
+	}
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	fmt.Println(os.Args[0]," starting")
@@ -73,7 +77,7 @@ func main() {
 		os.Setenv("DEBUG","true")
 	}
 
-	am := amgr.New(cfg,*args.DataDir,*args.Debug)
+	am := amgr.New(cfg,*args.DataDir,debug)
 
 	fmt.Println(os.Args[0]," listening on ",*args.Listen)
 	go am.Manage()
