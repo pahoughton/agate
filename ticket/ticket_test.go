@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 	cfg := config.New()
 	got := New(cfg.Ticket,false)
 	assert.NotNil(t,got)
-	got.Close()
+	got.Del()
 }
 
 func TestNewPanic(t *testing.T) {
@@ -34,7 +34,7 @@ func TestSink(t *testing.T) {
 	got = obj.Sink(TSysUnknown)
 	assert.Nil(t,got)
 
-	obj.Close()
+	obj.Del()
 }
 
 func TestGroup(t *testing.T) {
@@ -43,7 +43,7 @@ func TestGroup(t *testing.T) {
 	assert.NotNil(t,t)
 	got := obj.Group(TSysMock)
 	assert.Equal(t,got,"")
-	obj.Close()
+	obj.Del()
 
 	exp := "agate-test"
 	cfg.Ticket.Sys.Gitlab.Group = exp
@@ -53,107 +53,6 @@ func TestGroup(t *testing.T) {
 
 	assert.Equal(t,exp,obj.Group(TSysGitlab))
 	assert.Equal(t,exp + "hpsm",obj.Group(TSysHpsm))
-	obj.Close()
+	obj.Del()
 
 }
-
-
-/* FIXME
-func TestAlertTSys(t *testing.T) {
-	obj := New(config.New().Ticket,false)
-
-	for k, exp := range tsysmap {
-
-		a := alert.Alert{pmod.Alert{
-			Labels: pmod.LabelSet{ "ticket_sys": pmod.LabelValue(k) }},
-			"firing",
-		}
-		got := obj.AlertTSys(a)
-		assert.Equal(t,got,exp)
-	}
-
-	a := alert.Alert{}
-	exp := obj.Default
-	got := obj.AlertTSys(a)
-	assert.Equal(t,got,exp)
-
-	a.Labels = pmod.LabelSet{ "ticket_sys": "invalid" }
-	got = obj.AlertTSys(a)
-	assert.Equal(t,got,exp)
-	promp.Unregister(obj.MetrTicketsGend)
-	promp.Unregister(obj.MetrErrors)
-}
-
-func TestAGroupTSys(t  *testing.T) {
-	obj := New(config.New().Ticket,false)
-
-	for k, exp := range tsysmap {
-
-		ag := alert.AlertGroup{}
-		ag.ComLabels = alert.LabelMap{ "ticket_sys":  pmod.LabelValue(k) }
-
-		got := obj.AgroupTSys(ag)
-		assert.Equal(t,got,exp)
-
-		a1 := alert.Alert{pmod.Alert{
-			Labels: pmod.LabelSet{ "ticket_sys": pmod.LabelValue(k) }},
-			"firing",
-		}
-		a2 := alert.Alert{pmod.Alert{
-			Labels: pmod.LabelSet{ "ticket_sys": pmod.LabelValue("other") }},
-			"firing",
-		}
-		abad := alert.Alert{pmod.Alert{
-			Labels: pmod.LabelSet{ "ticket_sys": pmod.LabelValue("invalid") }},
-			"firing",
-		}
-		ag.ComLabels = alert.LabelMap{}
-		ag.Alerts = []alert.Alert{ a1, a1, a2, a1, alert.Alert{}, abad }
-		got = obj.AgroupTSys(ag)
-		assert.Equal(t,got,exp)
-	}
-
-	a := alert.Alert{}
-	ag := alert.AlertGroup{}
-	ag.Alerts = []alert.Alert{ a }
-	exp := obj.Default
-	assert.Equal(t,obj.AgroupTSys(ag),exp)
-
-	ag.ComLabels = alert.LabelMap{ "ticket_sys": "invalid"  }
-	assert.Equal(t,obj.AgroupTSys(ag),exp)
-
-	aDef := alert.Alert{pmod.Alert{
-		Labels: pmod.LabelSet{
-			"ticket_sys": pmod.LabelValue(obj.Default.String()) }},
-		"firing",
-	}
-	aGit := alert.Alert{pmod.Alert{
-		Labels: pmod.LabelSet{
-			"ticket_sys": pmod.LabelValue(TSysGitlab.String()) }},
-		"firing",
-	}
-	aHpsm := alert.Alert{pmod.Alert{
-		Labels: pmod.LabelSet{
-			"ticket_sys": pmod.LabelValue(TSysHpsm.String()) }},
-		"firing",
-	}
-	aMock := alert.Alert{pmod.Alert{
-		Labels: pmod.LabelSet{
-			"ticket_sys": pmod.LabelValue(TSysMock.String()) }},
-		"firing",
-	}
-	aBad := alert.Alert{pmod.Alert{
-		Labels: pmod.LabelSet{
-			"ticket_sys": pmod.LabelValue("invalid") }},
-		"firing",
-	}
-	ag.ComLabels = alert.LabelMap{}
-	ag.Alerts = []alert.Alert{a,aDef,aGit,aHpsm,aMock,aBad}
-	assert.Equal(t,obj.AgroupTSys(ag),exp)
-
-	ag.Alerts = []alert.Alert{a,aHpsm,aGit,aHpsm,aHpsm,aMock,aBad}
-	assert.Equal(t,obj.AgroupTSys(ag),TSysHpsm)
-	promp.Unregister(obj.MetrTicketsGend)
-	promp.Unregister(obj.MetrErrors)
-}
-*/

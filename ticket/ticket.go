@@ -125,7 +125,7 @@ func (t *Ticket) NewTSysString(s string) TSys {
 }
 
 
-func (t *Ticket) Close() {
+func (t *Ticket) Del() {
 	t.unregister()
 }
 
@@ -156,7 +156,7 @@ func (t *Ticket) Group(s TSys) string {
 	}
 }
 
-func (t *Ticket) TCreate(s TSys, grp, title,desc string) tid.Tid {
+func (t *Ticket) Create(s TSys, grp, title,desc string) tid.Tid {
 	if t.Sink(s) != nil {
 		stid, err := t.Sink(s).Create(grp,title,desc)
 		if err == nil {
@@ -168,7 +168,7 @@ func (t *Ticket) TCreate(s TSys, grp, title,desc string) tid.Tid {
 	return nil
 }
 
-func (t *Ticket) TUpdate(id tid.Tid, msg string) bool {
+func (t *Ticket) Update(id tid.Tid, msg string) bool {
 	if t.Sink(TSys(id.Sys())) != nil {
 		err := t.Sink(TSys(id.Sys())).Update(id,msg)
 		if err == nil {
@@ -180,7 +180,7 @@ func (t *Ticket) TUpdate(id tid.Tid, msg string) bool {
 	return false
 }
 
-func (t *Ticket) TClose(id tid.Tid, msg string) bool {
+func (t *Ticket) Close(id tid.Tid, msg string) bool {
 	if t.Sink(TSys(id.Sys())) != nil {
 		err := t.Sink(TSys(id.Sys())).Close(id,msg)
 		if err == nil {
