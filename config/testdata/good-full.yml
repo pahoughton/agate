@@ -3,6 +3,7 @@
 ---
 global:
   retry: 1h
+  parallel-fix: 24
   data-age: 30
   scripts-dir: /sdiff
   playbook-dir: /pdiff

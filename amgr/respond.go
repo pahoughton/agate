@@ -122,8 +122,8 @@ func (am *Amgr)Respond(agqkey uint64) bool {
 			if aname == "unknown" {
 				am.Errorf("alert missing alertname")
 			} else {
-				remed = remed || am.remed.AnsibleAvail(a.Labels)
-				remed = remed || am.remed.ScriptAvail(a.Labels)
+				remed = remed || am.fix.remed.AnsibleAvail(a.Labels)
+				remed = remed || am.fix.remed.ScriptAvail(a.Labels)
 			}
 			anyRemed = anyRemed || remed
 			newAlerts = append(newAlerts,
@@ -187,7 +187,7 @@ func (am *Amgr)Respond(agqkey uint64) bool {
 		} else {
 			hdr += "close: manual\n\n"
 		}
-		agtid = am.ticket.TCreate(tsys,tgrp,agrp.Title(),hdr + agrp.Desc())
+		agtid = am.ticket.Create(tsys,tgrp,agrp.Title(),hdr + agrp.Desc())
 		if agtid == nil {
 			return false// abort
 		}
@@ -203,21 +203,15 @@ func (am *Amgr)Respond(agqkey uint64) bool {
 			msg += agrp.Alerts[a.agidx].Desc() + "\n"
 		}
 		// ticket.Update
-		if am.ticket.TUpdate(agtid, msg) == false {
+		if am.ticket.Update(agtid, msg) == false {
 			return false
 		}
 	}
-	// ? remediate
+
 	for _, a := range newAlerts {
-		if a.remed {
-			// fix
-			out := am.Fix(agrp.Alerts[a.agidx])
-			if am.ticket.TUpdate(agtid,out) == false {
-				am.Errorf("remed ticket(%s) update\n%v",agtid.String(),out)
-				return false
-			}
-		}
+		if a.remed { am.Remed(agrp.Alerts[a.agidx],agtid) }
 	}
+
 	// new resolved
 	if len(resolvedAlerts) > 0 {
 		msg := "\n"
@@ -232,17 +226,17 @@ func (am *Amgr)Respond(agqkey uint64) bool {
 			msg += "\nAll Alerts Resolved\n"
 			if am.ticket.CloseResolved {
 				// ticket.Close
-				if am.ticket.TClose(agtid,msg) == false {
+				if am.ticket.Close(agtid,msg) == false {
 					return false
 				}
 			} else {
-				if am.ticket.TUpdate(agtid,msg) == false {
+				if am.ticket.Update(agtid,msg) == false {
 					return false
 				}
 			}
 		} else {
 			// ticket.Update
-			if am.ticket.TUpdate(agtid,msg) == false {
+			if am.ticket.Update(agtid,msg) == false {
 				return false
 			}
 		}

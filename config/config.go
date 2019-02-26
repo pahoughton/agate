@@ -13,6 +13,7 @@ import (
 )
 type Global struct {
 	Retry				time.Duration	`yaml:"retry,omitempty"`
+	Remed				uint			`yaml:"parallel-fix,omitempty"`
 	DataAge				uint			`yaml:"data-age,omitempty"`
 	CfgScriptsDir		string			`yaml:"scripts-dir,omitempty"`
 	CfgPlaybookDir		string			`yaml:"playbook-dir,omitempty"`
@@ -67,6 +68,7 @@ func New() (*Config) {
 		Global: Global{
 			DataAge: 15,
 			Retry: time.Duration(10 * time.Minute),
+			Remed: 8,
 			CfgScriptsDir: "scripts",
 			CfgPlaybookDir: "playbook",
 		},

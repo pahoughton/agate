@@ -17,6 +17,7 @@ func TestNewConfig(t *testing.T) {
 
 	exp := `global:
   retry: 10m0s
+  parallel-fix: 8
   data-age: 15
   scripts-dir: scripts
   playbook-dir: playbook
@@ -68,6 +69,7 @@ func TestLoadFull(t *testing.T) {
 	exp :=  &Config{
 		Global: Global{
 			Retry:			expRetry,
+			Remed:			24,
 			DataAge:		30,
 			CfgScriptsDir:	"/sdiff",
 			CfgPlaybookDir:	"/pdiff",
