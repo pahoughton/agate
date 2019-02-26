@@ -32,10 +32,11 @@ func (r *Remed) AnsibleAvail(labels pmod.LabelSet) bool {
 
 func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 
-	aname, ok := string(labels["alertname"])
+	taname, ok := labels["alertname"]
 	if ! ok {
 		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
 	}
+	aname := string(taname)
 
 	// create inventory file for ansible
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
