@@ -48,9 +48,9 @@ var (
 			Version("0.0.2")
 
 	args = CommandArgs {
-		ListenAddr:	app.Flag("listen-addr","listen address").
-			Default(":5002").String(),
-		DataDir:	app.Flag("data-dir","ansible playbook dir").
+		ListenAddr:	app.Flag("addr","listen address").
+			Default(":6102").String(),
+		DataDir:	app.Flag("data","ticket data").
 			Default("data").String(),
 		Debug:		app.Flag("debug","debug output to stdout").
 			Bool(),

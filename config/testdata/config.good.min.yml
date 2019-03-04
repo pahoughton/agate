@@ -1,6 +1,0 @@
-# 2019-02-11 (cc) <paul4hough@gmail.com>
-#
----
-listen-addr: ":9201"
-ticket-default-sys: gitlab
-ticket-default-grp: user/project

@@ -1,4 +1,4 @@
-/* 2018-12-25 (cc) <paul4hough@gmail.com>
+ /* 2018-12-25 (cc) <paul4hough@gmail.com>
    agate entry point
 */
 package main
@@ -29,6 +29,7 @@ var (
 
 type CommandArgs struct {
 	ConfigFn	*string
+	Listen		*string
 	DataDir		*string
 	Debug		*bool
 }
@@ -49,19 +50,25 @@ func main() {
 			Version(version)
 
 	args := CommandArgs{
-		ConfigFn:	app.Flag("config-file","config filename").
+		ConfigFn:	app.Flag("config","config filename").
 			Default("agate.yml").String(),
-		DataDir:	app.Flag("data-dir","data directory").
-			Default("/opt/agate/data").String(),
+		Listen:		app.Flag("addr","listen address").
+			Default(":4464").String(),
+		DataDir:	app.Flag("data","data directory").
+			Default("data").String(),
 		Debug:		app.Flag("debug","debug output to stdout").Bool(),
 	}
 
+	debug := false
+	if args.Debug != nil && *args.Debug {
+		debug = true
+	}
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	fmt.Println(os.Args[0]," starting")
 	fmt.Println("loading ",*args.ConfigFn)
 
-	cfg, err := config.LoadFile(*args.ConfigFn)
+	cfg, err := config.Load(*args.ConfigFn)
 	if err != nil {
 		panic(err)
 	}
@@ -70,13 +77,14 @@ func main() {
 		os.Setenv("DEBUG","true")
 	}
 
-	amhandler := amgr.New(cfg,*args.DataDir,*args.Debug)
+	am := amgr.New(cfg,*args.DataDir,debug)
 
-	fmt.Println(os.Args[0]," listening on ",cfg.ListenAddr)
+	fmt.Println(os.Args[0]," listening on ",*args.Listen)
+	go am.Manage()
 
 	http.Handle("/metrics",promh.Handler())
-	http.Handle("/alerts",amhandler)
+	http.Handle("/alerts",am)
 
-	fmt.Println("FATAL: ",http.ListenAndServe(cfg.ListenAddr,nil).Error())
+	fmt.Println("FATAL: ",http.ListenAndServe(*args.Listen,nil).Error())
 	os.Exit(1)
 }

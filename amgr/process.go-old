@@ -1,0 +1,251 @@
+/* 2019-02-14 (cc) <paul4hough@gmail.com>
+   process alert
+*/
+package amgr
+
+
+func (am *Amgr)ProcFiring(a *model.Alert, tid string ) {
+
+	aname, ok := a.Labels['alertname']
+	if ! ok {
+		am.Error("alert missing alertname")
+		return
+	}
+
+	node := "unknown"
+	if inst, ok := a.Labels["instance"]; ok {
+		node = strings.Split(string(inst),":")[0]
+	}
+	am.metrics.AlertsFiring.With(
+		promp.Labels{
+			"name": aname,
+			"node": node,
+		}).Inc()
+
+	ardir := path.Join(h.proc.PlaybookDir,"roles",aname)
+	finfo, err := os.Stat(ardir)
+	if err == nil && finfo.IsDir() {
+		emsg := ""
+		out, err := h.Proc.Ansible(node,a.Labels)
+		if err != nil {
+			emsg = "ERROR: " + err.Error() + "\n"
+			procErr += "ansible - " + err.Error() + "\n"
+		}
+		tcom := "ansible remediation results\n" + emsg + out
+
+		if err = am.ticket.Comment(a,tid,tcom); err != nil {
+			am.Error(fmt.Sprintf("ticket add comment: %s\n%s",err,tcom))
+		}
+	}
+
+	sfn := path.Join(h.proc.ScriptsDir,aname)
+	finfo, err = os.Stat(sfn)
+	if err == nil && (finfo.Mode() & 0111) != 0 {
+		emsg := ""
+		out, err := h.Proc.Script(node,a.Labels)
+		if err != nil {
+			emsg = "ERROR: " + err.Error() + "\n"
+			procErr += "script - " + err.Error() + "\n"
+		}
+		tcom := "script remediation results\n" + emsg + out
+
+		if err = am.ticket.Comment(a,tid,tcom); err != nil {
+			am.Error(fmt.Sprintf("ticket add comment: %s\n%s",err,tcom))
+		}
+
+					}
+
+			procErr := ""
+
+			if aremed {
+			}
+
+			if sremed {
+			}
+			if len(procErr) > 0 {
+				return errors.New(procErr)
+			}
+}
+
+func (am *Amgr)ProcResolved(a *model.Alert, tid string) {
+
+}
+
+
+	agCnt := len(agrp.Alerts)
+	agResolved := 0
+	tid := ""
+
+
+
+
+
+
+	for _, a := range agrp.Alerts {
+
+		aKey := a.Key()
+		aTicket, err := am.db.TicketGet(a.StartsAt, aKey)
+
+		if err != nil {
+			panic(fmt.Sprintf("db.TicketGet: %s",err.Error()))
+		}
+		if aTicket == nil {
+			if a.Status == 'firing' {
+			} else {
+				continue
+			}
+		} else {
+			tid = aTicket.tid
+			if a.Status == 'firing' {
+				continue
+			} else {
+				if ! aTicket.resolved {
+					am.ProcResolvedAlert(a,aKey,aTicket)
+				}
+				++ agResolved
+			}
+		}
+	}
+	if agResolved == agCnt {
+		am.CloseTicket(tid)
+	}
+}
+
+		}
+
+
+		if agrp.Status == "firing" {
+
+			remed := false
+
+			for _, a := range agrp.Alerts {
+
+				aname := a.Name()
+				node := "unknown"
+
+				if inst, ok := a.Labels["instance"]; ok {
+					node = strings.Split(string(inst),":")[0]
+				}
+
+
+				ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
+				finfo, err := os.Stat(ardir)
+				if err == nil && finfo.IsDir() {
+					remed = true
+					break
+				}
+
+				sfn := path.Join(h.Proc.ScriptsDir,aname)
+				finfo, err = os.Stat(sfn)
+				if err == nil && (finfo.Mode() & 0111) != 0 {
+					remed = true
+					break;
+				}
+			}
+			if remed {
+				agrp.ComAnnots['remediation'] = "pending"
+			} else {
+				agrp.ComAnnots['remediation'] = "none"
+			}
+			FIX TICKET DATA STRUCT - ticket id by alert group := resolve updates ticket,
+			all resolved to close! The rabit hole .... BIG FUN.
+
+
+
+			if a.Status == "firing" {
+
+			pending := ""
+			aremed := false
+			sremed := false
+
+
+			ardir := path.Join(h.Proc.PlaybookDir,"roles",aname)
+			finfo, err := os.Stat(ardir)
+			if err == nil && finfo.IsDir() {
+				aremed = true
+				pending += "ansible remediation pending\n"
+			}
+
+			sfn := path.Join(h.Proc.ScriptsDir,aname)
+			finfo, err = os.Stat(sfn)
+			if err == nil && (finfo.Mode() & 0111) != 0 {
+				sremed = true;
+				pending += "script remediation pending\n"
+			}
+
+			if aremed == false && sremed == false  {
+				pending += "no remediation available\n"
+			}
+
+			a.Annotations["pending"] = pmod.LabelValue(pending)
+			tid, err = h.Ticket.Create(a)
+
+			if err != nil {
+				return fmt.Errorf("ticket.Create: %s",err.Error())
+			}
+
+			if err = h.Adb.AddTicket(a.StartsAt,aKey,tid); err != nil {
+				return err
+			}
+
+			procErr := ""
+
+			if aremed {
+				emsg := ""
+				out, err := h.Proc.Ansible(node,a.Labels)
+				if err != nil {
+					emsg = "ERROR: " + err.Error() + "\n"
+					procErr += "ansible - " + err.Error() + "\n"
+				}
+				tcom := "ansible remediation results\n" + emsg + out
+
+				if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket add comment: %s\n%s",err,tcom)
+				}
+			}
+
+			if sremed {
+				emsg := ""
+				out, err := h.Proc.Script(node,a.Labels)
+				if err != nil {
+					emsg = "ERROR: " + err.Error() + "\n"
+					procErr += "script - " + err.Error() + "\n"
+				}
+				tcom := "script remediation results\n" + emsg + out
+
+				if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket add comment: %s\n%s",err,tcom)
+				}
+			}
+			if len(procErr) > 0 {
+				return errors.New(procErr)
+			}
+		} else if a.Status == "resolved" {
+
+			tid, err := h.Adb.GetTicket(a.StartsAt, aKey)
+			if err != nil {
+				fmt.Printf("WARN resolved not found: %v",a.Labels)
+				return nil
+			}
+
+			tcom := fmt.Sprintf("resolved at %v",a.EndsAt)
+
+			if h.CloseResolved || a.Annotations["close_resolved"] == "true" {
+
+				if err = h.Ticket.Close(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket close: %s",err)
+				}
+			} else {
+				if err = h.Ticket.AddComment(a,tid,tcom); err != nil {
+					return fmt.Errorf("ticket comment: %s\n%s",err,tcom)
+				}
+			}
+
+			if err = h.Adb.Delete(a.StartsAt, aKey); err != nil {
+				return err
+			}
+		}
+	}
+
+
+}

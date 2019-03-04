@@ -1,0 +1,28 @@
+#!/bin/bash
+# 2019-02-22 (cc) <paul4hough@gmail.com>
+#
+[ -z "$DEBUG" ] || set -x
+
+node=$1;
+labelsfn=$2
+if [ -z "$labelsfn" ] ; then
+  echo "missing labelsfn"
+  exit 1
+fi
+tmpfn=/tmp/remed-$$
+
+# abc: def to abc=def
+cat $labelsfn |
+  grep ' *[a-zA-Z][^:]*: ' |
+  sed 's~\([^:]*\):  *\([^ ].*\)~\1=\2~'  > $tmpfn
+
+source $tmpfn
+rm $tmpfn
+
+if [ -n "$testfn" ] ; then
+  echo fixed > $testfn
+  exit 0
+else
+  echo ERROR testfn not set
+  exit 1
+fi

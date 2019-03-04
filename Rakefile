@@ -7,7 +7,6 @@ at_exit {
   puts "run time: #{runtime}"
 }
 
-
 task :default do
   sh 'rake --tasks'
   exit 1
@@ -17,13 +16,25 @@ task :yamllint do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
 end
 
-task :test => [:yamllint] do
-  sh 'cd config && go test -mod=vendor'
+task :test, [:name] => [:yamllint] do |tasks, args|
+  if args[:name]
+    sh "cd #{args[:name]} && go test -v ./..."
+  else
+    sh 'go test -v ./...'
+  end
 end
 
 task :build do
   sh 'go build -mod=vendor'
   sh 'cd mock-ticket && go build -mod=vendor'
+  sh 'cd mock-service && go build -mod=vendor'
+end
+
+task :vup do
+  sh 'cd test && vagrant up'
+end
+task :vprov do
+  sh 'cd test && vagrant provision'
 end
 
 task :build_static do
@@ -84,6 +95,5 @@ end
 
 task :travis do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
-  sh 'cd config && go test'
-  sh 'go build'
+  sh 'go test -v ./...'
 end

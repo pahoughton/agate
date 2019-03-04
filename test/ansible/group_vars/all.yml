@@ -1,6 +1,9 @@
 # 2018-12-23 (cc) <paul4hough@gmail.com>
 #
 ---
+
+go_version: 1.11.5
+
 mon_user: monitor
 mon_dir: /opt/monitor
 mon_base_apps:
@@ -11,7 +14,7 @@ prom_apps:
   - alertmanager
 
 remed_user: agate
-remed_dir: /var/lib/agate
+remed_dir: /opt/agate
 
 port_prom: 9090
 port_amgr: 9093

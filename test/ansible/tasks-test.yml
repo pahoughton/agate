@@ -1,0 +1,82 @@
+# 2019-02-23 (cc) <paul4hough@gmail.com>
+#
+---
+
+- name: install packages
+  become: true
+  package:
+    name: [git, rubygem-rake, ansible]
+    state: present
+
+- name: add /usr/local/go/bin to path
+  lineinfile:
+    path: .bashrc
+    line: export PATH=/usr/local/go/bin:$PATH
+
+- name: gen ssh keys
+  command: ssh-keygen -q -t rsa -f .ssh/id_rsa -C "" -N ""
+  args:
+    creates: .ssh/id_rsa
+
+- name: slurp pub key
+  slurp:
+    src: .ssh/id_rsa.pub
+  register: pubkey
+
+- name: debug pubkey
+  debug:
+    msg: "pubkey: {{ pubkey['content'] | b64decode }}"
+
+- name: test authorized key
+  authorized_key:
+    user: "{{ ansible_user_id }}"
+    state: present
+    key: "{{ pubkey['content'] | b64decode }}"
+
+# - name: authorized key self
+#   shell: |
+#     cat .ssh/id_rsa.pub >> .ssh/authorized_keys
+#     touch .ssh/.ansible-oneshot
+#   args:
+#     creates: .ssh/.ansible-oneshot
+
+#   authorized_key:
+#     user: "{{ ansible_user_id }}"
+#     state: present
+#     key: "{{ item }}"
+#   with_file:
+#     - ssh-keys/test-id_rsa.pub
+
+- name: reset connection
+  meta: reset_connection
+
+- name: no hostkey checking
+  copy:
+    dest: .ssh/config
+    content: StrictHostKeyChecking no
+    mode: 0600
+
+
+- name: add test public key
+  authorized_key:
+    user: "{{ ansible_user_id }}"
+    state: present
+    key: "{{ item }}"
+  with_file:
+    - ssh-keys/test-id_rsa.pub
+
+- name: upload test private key
+  copy:
+    src: ssh-keys/test-id_rsa
+    dest: .ssh/id_rsa
+    mode: 0600
+
+- name: clone agate repo
+  git:
+    repo: https://github.com/pahoughton/agate
+    dest: agate
+
+- name: run tests
+  shell: |
+    PATH=/usr/local/go/bin:$PATH
+    cd agate && go test ./...
