@@ -21,5 +21,4 @@ yamllint:
 go-test:
   image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
   script:
-    - env
-    - go test -mod=vendor ./...
+    - go test -v -mod=vendor ./...
