@@ -17,3 +17,8 @@ yamllint:
   image: $CI_REGISTRY/cca/cca/yamllint
   script:
     - yamllint .gitlab-ci.yml test config
+
+go-test:
+  image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
+  script:
+    - go test -mod=vendor ./...
