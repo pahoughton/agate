@@ -29,9 +29,9 @@ func TestAnsibleAvail(t *testing.T) {
 }
 
 func TestAnsible(t *testing.T) {
-	if len(os.Getenv("TRAVIS")) > 0 {
-		// travis can't ssh localhost for ansible test
-		print("travis skip ansible\n")
+	if len(os.Getenv("TRAVIS")) > 0 || len(os.Getenv("GITLAB_CI")) > 0 {
+		// travis and gitlab can't ssh localhost for ansible test
+		print("travis/gitlab ci skip ansible\n")
 		return
 	}
 	cfg := config.New()
