@@ -39,7 +39,7 @@ func TestRemed(t *testing.T) {
 		"testfn": pmod.LabelValue(expfn),
 	}
 	exphits := tsmock.Hits + 1
-	if len(os.Getenv("TRAVIS")) == 0 {
+	if len(os.Getenv("TRAVIS")) == 0 && len(os.Getenv("GITLAB_CI")) == 0 {
 		// travis can't ssh localhost for ansible test
 		am.Remed(alert,tid)
 		am.fix.wg.Wait()
@@ -47,7 +47,7 @@ func TestRemed(t *testing.T) {
 		assert.FileExists(t,expfn)
 		os.Remove(expfn)
 	} else {
-		print("travis - skip ansible")
+		print("travis/gitlab ci skip ansible\n")
 	}
 
 	expfn = "/tmp/test-agate-script"
