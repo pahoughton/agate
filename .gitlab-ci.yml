@@ -11,7 +11,10 @@ build:
     paths:
       - agate
   script:
-    - go build -mod=vendor
+    - rake build_static
+  cache:
+    paths:
+      - agate
 
 yamllint:
   image: $CI_REGISTRY/cca/cca/yamllint
@@ -22,3 +25,9 @@ go-test:
   image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
   script:
     - go test -v -mod=vendor ./...
+
+deploy:
+  stage: deploy
+  image: $CI_REGISTRY/registry/hub.docker.com/docker:18.05.0-ce
+  script:
+    - docker build -t $CI_REGISTRY/cca/cca/agate:0.3.2
