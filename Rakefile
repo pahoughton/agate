@@ -12,10 +12,12 @@ task :default do
   exit 1
 end
 
+desc 'lint yml files'
 task :yamllint do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
 end
 
+desc 'validate'
 task :test, [:name] => [:yamllint] do |tasks, args|
   if args[:name]
     sh "cd #{args[:name]} && go test -v ./..."
@@ -24,6 +26,7 @@ task :test, [:name] => [:yamllint] do |tasks, args|
   end
 end
 
+desc 'compile'
 task :build do
   sh 'go build -mod=vendor'
   sh 'cd mock-ticket && go build -mod=vendor'
@@ -37,6 +40,7 @@ task :vprov do
   sh 'cd test && vagrant provision'
 end
 
+desc 'create static binary'
 task :build_static do
   require 'git'
   git = Git.open('.')
@@ -55,6 +59,7 @@ task :build_static do
      "-w -extldflags -static'"
 end
 
+desc 'create tarball'
 task :release => [:test, :build_static] do
   require 'git'
   git = Git.open('.')
@@ -93,6 +98,7 @@ task :release => [:test, :build_static] do
   sh "tar tzf agate-#{version}.amd64.tar.gz"
 end
 
+desc 'tavis validation'
 task :travis do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
   sh 'go test -v ./...'
