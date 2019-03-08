@@ -47,8 +47,11 @@ task :build_static do
 
   branch = git.branch
   commit = git.gcommit('HEAD').sha
-  version = File.open('VERSION', &:readline).chomp
-
+  if ENV['CI_COMMIT_TAG']
+    version = ENV['CI_COMMIT_TAG']
+  else
+    version = File.open('VERSION', &:readline).chomp
+  end
   sh 'go build -mod=vendor ' + \
      "-tags netgo -ldflags '" +\
      "-X main.Version=#{version} " +\
