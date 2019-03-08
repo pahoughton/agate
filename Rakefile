@@ -48,7 +48,6 @@ task :build_static do
   branch = git.branch
   commit = git.gcommit('HEAD').sha
   version = File.open('VERSION', &:readline).chomp
-  tag = git.tags[-1]
 
   sh 'go build -mod=vendor ' + \
      "-tags netgo -ldflags '" +\
