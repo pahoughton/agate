@@ -19,9 +19,9 @@ build:
     - rake build_static
 
 yamllint:
-  image: $CI_REGISTRY/cca/cca/yamllint
+  image: $CI_REGISTRY/cca/docks/yamllint
   script:
-    - yamllint .gitlab-ci.yml test config
+    - rake yamllint
 
 test:
   image: $GOIMG
