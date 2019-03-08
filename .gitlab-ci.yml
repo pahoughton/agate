@@ -1,5 +1,5 @@
 # 2019-01-30 (cc) <paul4hough@gmail.com>
-# ci config
+#
 ---
 variables:
   GOIMG: $CI_REGISTRY/cca/docks/golang
