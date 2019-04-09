@@ -32,7 +32,7 @@ testdeploy:
   image: $GOIMG
   stage: deploy
   only:
-    - master@cca-devel/agate
+    - tags@cca/maul/agate
   cache:
     paths:
       - agate
