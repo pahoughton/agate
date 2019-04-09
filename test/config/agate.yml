@@ -1,23 +1,5 @@
 # 2019-01-22 (cc) <paul.houghton.ywi9@statefarm.com>
 #
 ---
-listen-addr: ":5001"
-base-dir: /home/vagrant/agate
-max-days: 15
-# ticket-default-sys: gitlab
-# ticket-default-grp: ywi9/test-alerts
-ticket-default-sys: hpsm
-ticket-default-grp: WG10542
-close-resolved: true
-email-smtp: localhost:25
-email-from: no-reply-agate@nowhere.none
-gitlab-url: https://sfgitlab.opr.statefarm.org/api/v4
-gitlab-token: vMeh2e2jLss9zsJUTx4p
-hpsm-base-url: http://sfesb-imp.opr.test.statefarm.org
-# hpsm-base-url: http://localhost:5002
-hpsm-create-ep: B2E/IncidentManagement_v2_0
-hpsm-update-ep: B2E/IncidentManagement_v2_0
-hpsm-close-ep: B2E/IncidentManagementV3
-hpsm-user: ip_soft_int
-hpsm-pass: <secret>
-mock-ticket-url: http://localhost:9202/ticket
+notify:
+  close-resolved: true

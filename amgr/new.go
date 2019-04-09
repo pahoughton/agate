@@ -6,20 +6,14 @@ package amgr
 
 import (
 	"fmt"
-	"sync"
 	"time"
-
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/pahoughton/agate/config"
- 	"github.com/pahoughton/agate/ticket"
+ 	"github.com/pahoughton/agate/notify"
 	"github.com/pahoughton/agate/remed"
 	"github.com/pahoughton/agate/db"
-)
-
-const (
-	ATimeFmt = "2006-01-02T15:04:05.000000000-07:00"
 )
 
 type Metrics struct {
@@ -28,20 +22,14 @@ type Metrics struct {
 	remed	*promp.GaugeVec
 	errors	promp.Counter
 }
-type Fix struct {
-	cnt		int32
-	max		uint
-	wg		sync.WaitGroup
-	remed	*remed.Remed
-}
 
 type Amgr struct {
 	debug	bool
-	retry	time.Duration
 	db		*db.DB
 	qmgr	*Manager
-	ticket	*ticket.Ticket
-	fix		Fix
+	notify	*notify.Notify
+	remed	*remed.Remed
+	retry	time.Duration
 	metrics	Metrics
 }
 
@@ -51,16 +39,14 @@ func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 	if err != nil {
 		panic(err)
 	}
+	n := notify.New(c.Notify,dbg)
 	am := &Amgr{
 		debug:		dbg,
 		retry:		c.Global.Retry,
 		db:			adb,
 		qmgr:		NewManager(),
-		ticket:		ticket.New(c.Ticket,dbg),
-		fix:		Fix{
-			max:		c.Global.Remed,
-			remed:		remed.New(c.Global,dbg),
-		},
+		notify:		n,
+		remed:		remed.New(c.Remed,n,dbg),
 		metrics: Metrics{
 			groups: proma.NewCounterVec(
 				promp.CounterOpts{
@@ -99,6 +85,13 @@ func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 	return am
 }
 
+func (am *Amgr) Del() {
+	am.notify.Del()
+	am.remed.Del()
+	am.db.Del()
+	am.unregister()
+}
+
 func (am *Amgr) unregister() {
 	if am.metrics.groups != nil {
 		promp.Unregister(am.metrics.groups)
@@ -117,17 +110,11 @@ func (am *Amgr) unregister() {
 		am.metrics.errors = nil
 	}
 }
-func (am *Amgr) Close() {
-	am.ticket.Del()
-	am.fix.remed.Close()
-	am.db.Close()
-	am.unregister()
-}
-func (am *Amgr) Errorf(format string, args ...interface{}) error {
+func (am *Amgr) errorf(format string, args ...interface{}) error {
 	am.metrics.errors.Inc()
 	return fmt.Errorf(format,args...)
 }
-func (am *Amgr) Error(err error) {
+func (am *Amgr) error(err error) {
 	am.metrics.errors.Inc()
 	fmt.Println("ERROR: ",err.Error())
 	if am.debug { panic(err); }

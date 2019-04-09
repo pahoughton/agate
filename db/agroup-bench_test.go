@@ -3,6 +3,7 @@
 */
 package db
 
+/*
 import (
 	"fmt"
 	"testing"
@@ -20,6 +21,8 @@ func BenchmarkAGroupAdd(b *testing.B) {
 		}
 	})
 }
+*/
+
 /*
 func BenchmarkAlertGet(b *testing.B) {
 	benchit(b,func (b *testing.B,db *DB) {

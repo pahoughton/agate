@@ -1,0 +1,41 @@
+# 2019-04-08 (cc) <paul4hough@gmail.com>
+#
+---
+- name: create mock filesystem file
+  become: true
+  command: /usr/bin/dd if=/dev/zero of=/opt/mock-fs-image count=40960
+  args:
+    creates: /opt/mock-fs-image
+
+- name: make filesysetem on mock fs
+  become: true
+  filesystem:
+    fstype: xfs
+    dev: /opt/mock-fs-image
+
+- name: make mount point dir for mock fs
+  become: true
+  file:
+    name: /opt/mock-mnt
+    state: directory
+    mode: 0775
+    owner: "{{ mon_user }}"
+    group: "{{ mon_user }}"
+
+- name: mount mock file system file
+  become: true
+  mount:
+    path: /opt/mock-mnt
+    src: /opt/mock-fs-image
+    opts: loop
+    fstype: xfs
+    state: mounted
+
+- name: create files dir on mock fs
+  become: true
+  file:
+    name: /opt/mock-mnt/files
+    state: directory
+    mode: 0775
+    owner: "{{ mon_user }}"
+    group: "{{ mon_user }}"

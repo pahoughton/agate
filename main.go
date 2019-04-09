@@ -79,8 +79,8 @@ func main() {
 
 	am := amgr.New(cfg,*args.DataDir,debug)
 
-	fmt.Println(os.Args[0]," listening on ",*args.Listen)
-	go am.Manage()
+	fmt.Println("listening on ",*args.Listen)
+	am.Manage()
 
 	http.Handle("/metrics",promh.Handler())
 	http.Handle("/alerts",am)

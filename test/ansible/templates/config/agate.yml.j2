@@ -2,11 +2,11 @@
 #
 ---
 global:
-  listen: ":{{ port_agate }}"
   data-age: 5
+remed:
   scripts-dir: "{{ remed_dir }}/scripts"
   playbook-dir: "{{ remed_dir }}/playbook"
-ticket-sys:
+notify:
   close-resolved: true
   systems:
     mock:

@@ -13,8 +13,8 @@ import (
 func TestNew(t *testing.T) {
 	got := New(config.New(),"testdata/data",false)
 	assert.NotNil(t,got)
-	got.Close()
+	got.Del()
 	got = New(config.New(),"testdata/data",false)
 	assert.NotNil(t,got)
-	got.Close()
+	got.Del()
 }

@@ -16,9 +16,9 @@ func TestNew(t *testing.T) {
 	edb, err := New("testdata",0664,15,false)
 	assert.NotNil(t,err)
 	assert.Nil(t,edb)
-	db.Close()
+	db.Del()
 	db, err = New("testdata",0664,15,false)
 	assert.Nil(t,err)
 	assert.NotNil(t,db)
-	db.Close()
+	db.Del()
 }
