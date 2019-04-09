@@ -12,7 +12,8 @@ import (
 
 func testit(t *testing.T, check func(t *testing.T,db *DB)) {
 
-	os.Remove(path.Join("testdata",dbFn))
+	os.Remove(path.Join("testdata",db1Fn))
+	os.Remove(path.Join("testdata",db0Fn))
 	db, err := New("testdata",0664,5,true)
 	require.Nil(t,err)
 	require.NotNil(t,db)
