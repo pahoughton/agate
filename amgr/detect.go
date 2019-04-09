@@ -93,6 +93,11 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 		w.WriteHeader(500)
 		panic("0 alerts in alertgroup")
 	}
+	if ag.Version != "4" {
+		w.WriteHeader(500)
+		panic("unsupported version")
+	}
+
 	agkey := ag.Key()
 	nsys := am.db.AGroupNSysGet(ag.StartsAt(),agkey);
 	if nsys == nil {
