@@ -28,16 +28,19 @@ test:
   script:
     - go test -v -mod=vendor ./...
 
-test-deploy:
+testdeploy:
   image: $GOIMG
   stage: deploy
   only:
     - master@cca-devel/agate
-  script:
-    - rake release
+  cache:
+    paths:
+      - agate
   artifacts:
     paths:
       - opt/maul/doc-snarf
+  script:
+    - rake release
 
 
 deploy:
