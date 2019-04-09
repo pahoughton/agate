@@ -1,0 +1,36 @@
+# 2018-12-24 (cc) <paul4hough@gmail.com>
+#
+---
+
+- name: upload mock-ticket
+  become: true
+  copy:
+    src: bin/mock-ticket
+    dest: /usr/bin/mock-ticket
+    mode: 0775
+
+
+- name: install mock service files
+  become: true
+  template:
+    src: systemd/mock-ticket.service.j2
+    dest: /etc/systemd/system/mock-ticket.service
+
+- name: create directories
+  become: true
+  file:
+    name: "{{ item }}"
+    state: directory
+    owner: "{{ mon_user }}"
+    mode: 0775
+  with_items:
+    - /opt/mock-ticket
+    - /opt/mock-ticket/data
+
+- name: enable and start mock services
+  become: true
+  systemd:
+    name: mock-ticket
+    state: started
+    enabled: true
+    daemon_reload: true

@@ -24,8 +24,8 @@ const (
 )
 
 type Metrics struct {
-	agqueue		promp.Gauge
-	tickets		*promp.GaugeVec
+	agqueue		*promp.GaugeVec
+	dbucket		*promp.GaugeVec
 	errors		promp.Counter
 }
 type DB struct {
@@ -38,46 +38,32 @@ type DB struct {
 func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 
 	fn := path.Join(dir,dbFn)
-	_, err := os.Stat(fn)
-	isnew := err != nil || os.IsNotExist(err)
+	// _, err := os.Stat(fn)
+	// isnew := err != nil || os.IsNotExist(err)
 	opts := &bolt.Options{Timeout: 50 * time.Millisecond}
 	bdb, err := bolt.Open(fn,mode,opts)
 	if err != nil {
 		return nil, err
-	}
-	if isnew {
-		err := bdb.Update(func(tx *bolt.Tx) error {
-			if _, err := tx.CreateBucket(agroupBucket()); err != nil {
-				return err
-			}
-			if _, err := tx.CreateBucket(alertsBucket()); err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
 	}
 	db := &DB{
 		debug: debug,
 		db: bdb,
 		maxDays: int(maxDays),
 		metrics: &Metrics{
-			agqueue: proma.NewGauge(
+			agqueue: proma.NewGaugeVec(
 				promp.GaugeOpts{
 					Namespace: "agate",
 					Subsystem: "db",
 					Name:      "agroup_queue_size",
 					Help:      "number of records in agroup bucket",
-				}),
-			tickets: proma.NewGaugeVec(
+				},[]string{"sys"}),
+			dbucket: proma.NewGaugeVec(
 				promp.GaugeOpts{
 					Namespace: "agate",
 					Subsystem: "db",
-					Name:      "open_alerts_size",
+					Name:      "bucket_size",
 					Help:      "number of records in agroup bucket",
-				},[]string{ "date" }),
+				},[]string{ "date","bucket" }),
 			errors: proma.NewCounter(
 				promp.CounterOpts{
 					Namespace: "agate",
@@ -88,18 +74,17 @@ func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 		},
 	}
 
-	db.AlertCleanBuckets()
-	// reclean alert buckets every 24 hours
+	db.CleanDateBuckets()
 	go func() {
 		for _ = range time.NewTicker(time.Hour * 24).C {
 			fmt.Println("INFO cleaning buckets before")
-			db.AlertCleanBuckets()
+			db.CleanDateBuckets()
 		}
 	}()
 
 	return db, nil
 }
-func (db *DB) Close() {
+func (db *DB) Del() {
 	db.unregister()
 	if db.db != nil { db.db.Close(); db.db = nil }
 }
@@ -109,9 +94,9 @@ func (db *DB) unregister() { // for testing
 		promp.Unregister(db.metrics.agqueue);
 		db.metrics.agqueue = nil
 	}
-	if db.metrics.tickets != nil  {
-		promp.Unregister(db.metrics.tickets);
-		db.metrics.tickets = nil
+	if db.metrics.dbucket != nil  {
+		promp.Unregister(db.metrics.dbucket);
+		db.metrics.dbucket = nil
 	}
 	if db.metrics.errors != nil  {
 		promp.Unregister(db.metrics.errors);

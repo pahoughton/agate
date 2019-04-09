@@ -1,4 +1,0 @@
-# 2019-01-03 (cc) <paul4hough@gmail.com>
-#
-df -h $*
-exit 1

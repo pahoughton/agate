@@ -17,13 +17,14 @@ func TestNewConfig(t *testing.T) {
 
 	exp := `global:
   retry: 10m0s
-  parallel-fix: 8
   data-age: 15
+remed:
+  parallel: 24
   scripts-dir: scripts
   playbook-dir: playbook
   scriptsdir: ""
   playbookdir: ""
-ticket-sys:
+notify:
   default: mock
   close-resolved: true
   systems:
@@ -58,8 +59,8 @@ func TestLoadMin(t *testing.T) {
 	assert.NotNil(t,got)
 	exp := New()
 	// load sets dirs
-	exp.Global.ScriptsDir = "testdata/scripts"
-	exp.Global.PlaybookDir = "testdata/playbook"
+	exp.Remed.ScriptsDir = "testdata/scripts"
+	exp.Remed.PlaybookDir = "testdata/playbook"
 
 	assert.Equal(t,exp,got)
 }
@@ -69,8 +70,10 @@ func TestLoadFull(t *testing.T) {
 	exp :=  &Config{
 		Global: Global{
 			Retry:			expRetry,
-			Remed:			24,
 			DataAge:		30,
+		},
+		Remed: Remed{
+			Parallel:		32,
 			CfgScriptsDir:	"/sdiff",
 			CfgPlaybookDir:	"/pdiff",
 			ScriptsDir:		"/sdiff",
@@ -81,16 +84,16 @@ func TestLoadFull(t *testing.T) {
 			From: "agate@nowhere",
 			To: "invalid",
 		},
-		Ticket: Ticket{
+		Notify: Notify{
 			Resolved: true,
 			Default: "gitlab",
-			Sys: TicketSys{
-				Gitlab: TSysGitlab{
+			Sys: NotifySys{
+				Gitlab: NSysGitlab{
 					Url: "https://mylab",
 					Group: "paul",
 					Token: "secret-sauce",
 				},
-				Hpsm: TSysHpsm{
+				Hpsm: NSysHpsm{
 					Url:		"https://myhpsm/api",
 					User:		"paul",
 					Pass:		"secret-sauce",
@@ -103,7 +106,7 @@ func TestLoadFull(t *testing.T) {
 						"assignee": "you",
 					},
 				},
-				Mock: TSysMock{
+				Mock: NSysMock{
 					Url: "http://cbed:1234/abc",
 				},
 			},

@@ -13,8 +13,10 @@ import (
 )
 type Global struct {
 	Retry				time.Duration	`yaml:"retry,omitempty"`
-	Remed				uint			`yaml:"parallel-fix,omitempty"`
 	DataAge				uint			`yaml:"data-age,omitempty"`
+}
+type Remed struct {
+	Parallel			uint			`yaml:"parallel,omitempty"`
 	CfgScriptsDir		string			`yaml:"scripts-dir,omitempty"`
 	CfgPlaybookDir		string			`yaml:"playbook-dir,omitempty"`
 	// derived
@@ -27,12 +29,12 @@ type Email struct {
 	To		string	`yaml:"to,omitempty"`
 }
 
-type TSysGitlab struct {
+type NSysGitlab struct {
 	Url			string	`yaml:"url,omitempty"`
 	Group		string	`yaml:"repo"`
 	Token		string	`yaml:"token"`
 }
-type TSysHpsm struct {
+type NSysHpsm struct {
 	Url			string	`yaml:"url"`
 	User		string	`yaml:"user"`
 	Pass		string	`yaml:"pass"`
@@ -42,44 +44,47 @@ type TSysHpsm struct {
 	Group		string	`yaml:"workgroup"`
 	Defaults	map[string]string `yaml:"defaults,omitempty"`
 }
-type TSysMock struct {
+type NSysMock struct {
 	Url				string	`yaml:"url"`
 }
 
-type TicketSys struct {
-	Gitlab	TSysGitlab	`yaml:"gitlab,omitempty"`
-	Hpsm	TSysHpsm	`yaml:"hpsm,omitempty"`
-	Mock	TSysMock	`yaml:"mock,omitempty"`
+type NotifySys struct {
+	Gitlab	NSysGitlab	`yaml:"gitlab,omitempty"`
+	Hpsm	NSysHpsm	`yaml:"hpsm,omitempty"`
+	Mock	NSysMock	`yaml:"mock,omitempty"`
 }
-type Ticket struct {
+type Notify struct {
 	Default		string		`yaml:"default,omitempty"`
 	Resolved	bool		`yaml:"close-resolved,omitempty"`
-	Sys			TicketSys	`yaml:"systems,omitempty"`
+	Sys			NotifySys	`yaml:"systems,omitempty"`
 }
 type Config struct {
 	Global		Global		`yaml:"global,omitempty"`
+	Remed		Remed		`yaml:"remed,omitempty"`
 	Email		Email		`yaml:"email,omitempty"`
-	Ticket		Ticket		`yaml:"ticket-sys,omitempty"`
+	Notify		Notify		`yaml:"notify,omitempty"`
 }
 
 func New() (*Config) {
 	return &Config {
 		// defaults
 		Global: Global{
-			DataAge: 15,
 			Retry: time.Duration(10 * time.Minute),
-			Remed: 8,
+			DataAge: 15,
+		},
+		Remed: Remed{
+			Parallel: 24,
 			CfgScriptsDir: "scripts",
 			CfgPlaybookDir: "playbook",
 		},
-		Ticket: Ticket{
+		Notify: Notify{
 			Default: "mock",
 			Resolved: true,
-			Sys: TicketSys{
-				Gitlab: TSysGitlab{
+			Sys: NotifySys{
+				Gitlab: NSysGitlab{
 					Url: "https://gitlab.com",
 				},
-				Mock: TSysMock{
+				Mock: NSysMock{
 					Url: "http://localhost:6102/ticket",
 				},
 			},
@@ -104,21 +109,21 @@ func Load(fn string) (*Config, error) {
 
 	baseDir := path.Dir(fn)
 
-	if len(cfg.Global.CfgPlaybookDir) > 0 {
-		cfg.Global.PlaybookDir = cfg.Global.CfgPlaybookDir
+	if len(cfg.Remed.CfgPlaybookDir) > 0 {
+		cfg.Remed.PlaybookDir = cfg.Remed.CfgPlaybookDir
 	} else {
-		cfg.Global.PlaybookDir = "playbook"
+		cfg.Remed.PlaybookDir = "playbook"
 	}
-	if ! path.IsAbs(cfg.Global.PlaybookDir) {
-		cfg.Global.PlaybookDir = path.Join(baseDir,cfg.Global.PlaybookDir)
+	if ! path.IsAbs(cfg.Remed.PlaybookDir) {
+		cfg.Remed.PlaybookDir = path.Join(baseDir,cfg.Remed.PlaybookDir)
 	}
-	if len(cfg.Global.CfgScriptsDir) > 0 {
-		cfg.Global.ScriptsDir = cfg.Global.CfgScriptsDir
+	if len(cfg.Remed.CfgScriptsDir) > 0 {
+		cfg.Remed.ScriptsDir = cfg.Remed.CfgScriptsDir
 	} else {
-		cfg.Global.ScriptsDir = "scripts"
+		cfg.Remed.ScriptsDir = "scripts"
 	}
-	if ! path.IsAbs(cfg.Global.ScriptsDir) {
-		cfg.Global.ScriptsDir = path.Join(baseDir,cfg.Global.ScriptsDir)
+	if ! path.IsAbs(cfg.Remed.ScriptsDir) {
+		cfg.Remed.ScriptsDir = path.Join(baseDir,cfg.Remed.ScriptsDir)
 	}
 
 	return cfg, nil

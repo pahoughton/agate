@@ -8,9 +8,9 @@ After=network-online.target
 
 [Service]
 User={{ mon_user }}
-ExecStart={{ mon_dir }}/bin/mock-ticket \
-	     --listen-addr ":{{ port_mock_ticket }}" \
-	     --data-dir {{ mon_dir }}/data \
+ExecStart=/usr/bin/mock-ticket \
+	     --addr ":{{ port_mock_ticket }}" \
+	     --data /opt/mock-ticket/data \
 	     --debug
 
 [Install]

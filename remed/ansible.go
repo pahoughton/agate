@@ -15,11 +15,11 @@ import (
 	"os/exec"
 	"path"
 
-	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
+	"github.com/pahoughton/agate/amgr/alert"
 )
 
-func (r *Remed) AnsibleAvail(labels pmod.LabelSet) bool {
+func (r *Remed) AnsibleAvail(labels alert.LabelSet) bool {
 	aname, ok := labels["alertname"]
 	if ok {
 		ardir := path.Join(r.playbookDir,"roles",string(aname))
@@ -30,31 +30,30 @@ func (r *Remed) AnsibleAvail(labels pmod.LabelSet) bool {
 	}
 }
 
-func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
-
+func (r *Remed)Ansible( node string, labels alert.LabelSet) (string, error) {
 	taname, ok := labels["alertname"]
 	if ! ok {
-		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
+		return "", r.errorf("no alertname label: Ansible(%s,%v)",node,labels)
 	}
 	aname := string(taname)
 
 	// create inventory file for ansible
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
-		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", r.errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(invfile.Name())
 	if _, err := invfile.WriteString(node + "\n"); err != nil {
-		return "", r.Errorf("WriteString: %s",err.Error())
+		return "", r.errorf("WriteString: %s",err.Error())
 	}
 	if err := invfile.Close(); err != nil {
-		return "", r.Errorf("Close: %s",err.Error())
+		return "", r.errorf("Close: %s",err.Error())
 	}
 
 	// create playbook
 	pbfile, err := ioutil.TempFile(r.playbookDir,node)
 	if err != nil {
-		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", r.errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(pbfile.Name())
 	pbvars := "  vars:\n"
@@ -71,10 +70,10 @@ func (r *Remed)Ansible( node string, labels pmod.LabelSet) (string, error) {
 	if r.debug {fmt.Printf("proc.Ansible-playbook:\n%s\n",pbcont)}
 
 	if _, err := pbfile.WriteString(pbcont); err != nil {
-		return "", r.Errorf("WriteString: %s",err.Error())
+		return "", r.errorf("WriteString: %s",err.Error())
 	}
 	if err := pbfile.Close(); err != nil {
-		return "", r.Errorf("Close: %s",err.Error())
+		return "", r.errorf("Close: %s",err.Error())
 	}
 
 	arole := "agate_role=" + aname
