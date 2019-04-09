@@ -3,15 +3,16 @@
 ---
 global:
   retry: 1h
-  parallel-fix: 24
   data-age: 30
+remed:
   scripts-dir: /sdiff
   playbook-dir: /pdiff
+  parallel: 32
 email:
   smtp: localhost:25
   from: agate@nowhere
   to: invalid
-ticket-sys:
+notify:
   default: gitlab
   close-resolved: true
   systems:

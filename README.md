@@ -4,13 +4,9 @@
 
 Prometheus alertmanager webhook that responds to alerts by generating
 tickets, executing ansible roles and running scripts.
-
-## Todo
-- validate amgr/Manager()
-
 ## state
 
-hardening
+burn-in
 
 ## usage
 
@@ -37,23 +33,27 @@ Prometheus metrics are available via http://hostname:port/metrics,
 
 ### configuration
 
-See [config.good.full.yml](../master/config/testdata/config.good.full.yml)
+See [config.good.full.yml](blob/master/config/testdata/config.good.full.yml)
 
-### labels
-
-use these in your alertmanager alert grouping
-
-* ticket_sys (mock|gitlab|hpsm) (2.0: alertmanager)
-* ticket_grp: {gitlab: project, hpsm: workgroup} {alertmanager: receiver}
-* group_title: default: N grouped alerts (2.0 N *title)
 
 ### annotations
 
-* title: default: $alertname on $instance
+* group_title: alert group note (issue, ticket) title
+* agate_title, title, subject: note alert title
+
+### labels
+
+use notify_sys and notify_grp in your alertmanager alert grouping
+
+* notify_sys (mock|gitlab|hpsm) (2.0: alertmanager)
+* notify_grp: {gitlab: project, hpsm: workgroup}
+
+* agate_node, hostname, node, instance: remediation node
+* agate_title, title, subject: note (issue, ticket) title
 
 ## features
 
-* create, update & close ticket via $ticket_sys
+* create, update & close notes via $notify_sys
 * execute $alertname{script|ansible} (on $instance) remediation
 * hardened
 
@@ -64,18 +64,22 @@ ansible: [ansible-agate](https://github.com/pahoughton/puppet-agate)
 docker: [docker-agate](FIXME)
 source: go get github.com/pahoughton/agate
 
+## Todo
+
+- validate amgr/Manager()
+
 ## validation - under developement
 
 ### unit: go test ./...
 
-### system:
+### system (wip):
 
-command: rake systest
+command: cd test && rake spec
 requires: rake, ansbile, vagrant, virtualbox
 
-## example
+## examples
 
-see [test dir](../master/test) and *_test.go
+see [test dir](blob/master/test) and *_test.go
 
 ## contribute
 
@@ -87,4 +91,4 @@ https://github.com/pahoughton/agate
 
 GNU General Public License v3.0
 
-See [COPYING](../master/COPYING) for full text.
+See [COPYING](blob/master/COPYING) for full text.

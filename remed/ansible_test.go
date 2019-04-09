@@ -8,24 +8,25 @@ import (
 	"os"
 	"testing"
 
-	pmod "github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/pahoughton/agate/amgr/alert"
 	"github.com/pahoughton/agate/config"
 
 )
 func TestAnsibleAvail(t *testing.T) {
 	cfg := config.New()
-	cfg.Global.PlaybookDir = "testdata/playbook"
+	cfg.Remed.PlaybookDir = "testdata/playbook"
 
-	r := New(cfg.Global,false)
-	labels := pmod.LabelSet{}
+	r := New(cfg.Remed,nil,false)
+	labels := alert.LabelSet{}
 	assert.False(t,r.AnsibleAvail(labels))
-	labels = pmod.LabelSet{"alertname": "remed"}
+	labels =
+		alert.LabelSet{"alertname": "remed"}
 	assert.True(t,r.AnsibleAvail(labels))
-	labels = pmod.LabelSet{"alertname": "invalid"}
+	labels = alert.LabelSet{"alertname": "invalid"}
 	assert.False(t,r.AnsibleAvail(labels))
 
-	r.Close()
+	r.Del()
 }
 
 func TestAnsible(t *testing.T) {
@@ -35,14 +36,14 @@ func TestAnsible(t *testing.T) {
 		return
 	}
 	cfg := config.New()
-	cfg.Global.PlaybookDir = "testdata/playbook"
+	cfg.Remed.PlaybookDir = "testdata/playbook"
 
-	obj := New(cfg.Global,false)
+	obj := New(cfg.Remed,nil,false)
 	assert.NotNil(t,obj)
 
-	tfn := pmod.LabelValue("/tmp/test-agate-ansible")
+	tfn := "/tmp/test-agate-ansible"
 	os.Remove(string(tfn))
-	labels := pmod.LabelSet{"alertname": "remed","testfn": tfn}
+	labels := alert.LabelSet{"alertname": "remed","testfn": tfn}
 	got, err := obj.Ansible("localhost", labels)
 	assert.Nil(t,err)
 	if err != nil && len(got) > 0 { print("\nERRgot: "+got+"\n") }
@@ -55,13 +56,13 @@ func TestAnsible(t *testing.T) {
 	assert.Equal(t,`"test"`+"\n",string(buf))
 	os.Remove(string(tfn))
 
-	labels = pmod.LabelSet{}
+	labels = alert.LabelSet{}
 	got, err = obj.Ansible("localhost", labels)
 	assert.NotNil(t,err)
 
-	labels = pmod.LabelSet{"alertname": "invalid"}
+	labels = alert.LabelSet{"alertname": "invalid"}
 	got, err = obj.Ansible("localhost", labels)
 	assert.NotNil(t,err)
 
-	obj.Close()
+	obj.Del()
 }

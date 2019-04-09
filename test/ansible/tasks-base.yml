@@ -8,10 +8,10 @@
     user: "{{ ansible_user_id }}"
     key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
 
-- name: update RedHat family packages
-  become: true
-  yum:
-    update_cache: true
-    name: "*"
-    state: latest
-  when: ansible_os_family == 'RedHat'
+# - name: update RedHat family packages
+#   become: true
+#   yum:
+#     update_cache: true
+#     name: "*"
+#     state: latest
+#   when: ansible_os_family == 'RedHat'

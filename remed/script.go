@@ -12,11 +12,11 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
+	"github.com/pahoughton/agate/amgr/alert"
 )
 
-func (r *Remed) ScriptAvail(labels pmod.LabelSet) bool {
+func (r *Remed) ScriptAvail(labels alert.LabelSet) bool {
 	aname, ok := labels["alertname"]
 	if ok {
 		fn := path.Join(r.scriptsDir,string(aname))
@@ -27,27 +27,27 @@ func (r *Remed) ScriptAvail(labels pmod.LabelSet) bool {
 	}
 }
 
-func (r *Remed)Script(node string, labels pmod.LabelSet) (string, error) {
+func (r *Remed)Script(node string, labels alert.LabelSet) (string, error) {
 
 	aname, ok := labels["alertname"]
 	if ! ok {
-		return "", r.Errorf("no alertname label: Ansible(%s,%v)",node,labels)
+		return "", r.errorf("no alertname label: Ansible(%s,%v)",node,labels)
 	}
 	lfile, err := ioutil.TempFile("/tmp",node)
 	if err != nil {
-		return "", r.Errorf("ioutil.TempFile: %s",err.Error())
+		return "", r.errorf("ioutil.TempFile: %s",err.Error())
 	}
 	defer os.Remove(lfile.Name())
 
 	lyml, err := yaml.Marshal(labels)
 	if err != nil {
-		return "", r.Errorf("yaml.Marshal - %s\n%v",err,labels)
+		return "", r.errorf("yaml.Marshal - %s\n%v",err,labels)
 	}
 	if _, err := lfile.Write(lyml); err != nil {
-		return "", r.Errorf("Write: %s",err.Error())
+		return "", r.errorf("Write: %s",err.Error())
 	}
 	if err := lfile.Close(); err != nil {
-		return "", r.Errorf("Close: %s",err.Error())
+		return "", r.errorf("Close: %s",err.Error())
 	}
 	if r.debug {
 		os.Setenv("DEBUG","1")
