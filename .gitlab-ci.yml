@@ -18,6 +18,20 @@ build:
   script:
     - rake build_static
 
+release:
+  image: $GOIMG
+  stage: build
+  only:
+    - tags@cca-devel/agate/0.9
+  cache:
+    paths:
+      - agate
+  artifacts:
+    paths:
+      - opt/maul/doc-snarf
+  script:
+    - rake release
+
 yamllint:
   image: $CI_REGISTRY/cca/docks/yamllint
   script:
