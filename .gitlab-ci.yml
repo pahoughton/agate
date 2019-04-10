@@ -35,7 +35,7 @@ testdeploy:
     - master@cca-devel/agate
   script:
    - rake tarbuild
-
+   - curl -v -T test -u anonymous:anonymous ftp://172.17.0.3/artifacts
 
 deploy:
   stage: deploy
