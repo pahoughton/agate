@@ -33,11 +33,13 @@ testdeploy:
   stage: deploy
   only:
     - master@cca-devel/agate
-  artifacts:
-    paths:
-      - opt/maul/doc-snarf
   script:
-    - rake release
+    - version=`cat VERSION`
+    - mkdir agate-#{version}.amd64
+    - cp agate README.md VERSION COPYING agate-#{version}.amd64
+    - tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64
+    - tar tzf agate-#{version}.amd64.tar.gz
+    - curl -v -T test -u anonymous:anonymous ftp://172.17.0.3
 
 
 deploy:
