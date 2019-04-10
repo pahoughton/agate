@@ -32,10 +32,7 @@ testdeploy:
   image: $GOIMG
   stage: deploy
   only:
-    - tags@cca/maul/agate
-  cache:
-    paths:
-      - agate
+    - master@cca-devel/agate
   artifacts:
     paths:
       - opt/maul/doc-snarf
