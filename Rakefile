@@ -100,6 +100,16 @@ task :release => [:test, :build_static] do
   sh "tar tzf agate-#{version}.amd64.tar.gz"
 end
 
+desc 'f9v0 tarbuild'
+task :tarbuild do
+  puts "version: #{version}"
+  sh "mkdir agate-#{version}.amd64"
+  sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
+  sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
+  sh "tar tzf agate-#{version}.amd64.tar.gz"
+  sh "curl -v -T test -u anonymous:anonymous ftp://172.17.0.3/opt/artifacts/"
+end
+
 desc 'tavis validation'
 task :travis do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"

@@ -34,12 +34,7 @@ testdeploy:
   only:
     - master@cca-devel/agate
   script:
-    - version=`cat VERSION`
-    - mkdir agate-#{version}.amd64
-    - cp agate README.md VERSION COPYING agate-#{version}.amd64
-    - tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64
-    - tar tzf agate-#{version}.amd64.tar.gz
-    - curl -v -T test -u anonymous:anonymous ftp://172.17.0.3/opt/artifacts/
+   - rake tarbuild
 
 
 deploy:
