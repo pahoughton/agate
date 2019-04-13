@@ -1,0 +1,11 @@
+[
+  {
+    "labels": {
+      "alertname": "log-http-error",
+      "route": "email"
+    },
+    "annotations": {
+      "info": "errors found in splunk:http error log"
+    }
+  }
+]

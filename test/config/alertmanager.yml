@@ -2,33 +2,30 @@
 #
 ---
 global:
-  resolve_timeout: 15s
 
 route:
-  receiver: 'agate-resolve'
-  group_by:
-    - alertname
-    - instance
-  group_wait: 10s
+  receiver: resolve
+  group_wait: 5s
   group_interval: 10s
-  repeat_interval: 20s
 
   routes:
-    - receiver: 'agate-no-resolve'
+    - receiver: no-resolve
       match_re:
-        no_resolve: .*
-      group_by:
-        - alertname
-      group_wait: 10s
-      group_interval: 10s
-      repeat_interval: 20s
+        no_resolve: ..*
+    - receiver: email
+      match:
+        route: email
 
 receivers:
-  - name: 'agate-resolve'
+  - name: 'resolve'
     webhook_configs:
-      - url: 'http://localhost:5001/alerts'
+      - url: 'http://localhost:5001/resolve'
 
-  - name: 'agate-no-resolve'
+  - name: 'no-resolve'
     webhook_configs:
-      - url: 'http://localhost:5001/alerts'
+      - url: 'http://localhost:5001/no_resolve'
         send_resolved: false
+
+  - name: 'email'
+    webhook_configs:
+      - url: 'http://localhost:5001/no_resolve'
