@@ -54,7 +54,7 @@ func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 					Subsystem:	"amgr",
 					Name:      "groups_recvd",
 					Help:      "number of alert groups received",
-				},[]string{"resolve"}),
+				},[]string{"sys","grp","resolve"}),
 			alerts: proma.NewCounterVec(
 				promp.CounterOpts{
 					Namespace: "agate",

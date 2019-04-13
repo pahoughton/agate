@@ -17,13 +17,22 @@ import (
 const (
 	LBL_NSYS = "notify_sys"
 	LBL_NGRP = "notify_grp"
+
+	Url = "/api/v4/alerts"
 )
 
-func (am *Amgr)NewNSys(ag alert.AlertGroup, r bool) *db.NSys {
+func (am *Amgr)NewNSys(
+	defsys		notify.NSys,
+	pnsys, pgrp	string,
+	ag			alert.AlertGroup,
+	resolve		bool,
+) *db.NSys {
 
-	var nsys db.NSys
+	nsys := db.NSys{Sys: uint(defsys)}
 
-	if v, ok := ag.CommonLabels[LBL_NSYS]; ok {
+	if len(pnsys) > 0 {
+		nsys.Sys = uint(notify.NewNSys(pnsys))
+	} else if v, ok := ag.CommonLabels[LBL_NSYS]; ok {
 		nsys.Sys = uint(notify.NewNSys(string(v)))
 	} else {
 		cntmap := make(map[string]int,len(ag.Alerts))
@@ -41,7 +50,14 @@ func (am *Amgr)NewNSys(ag alert.AlertGroup, r bool) *db.NSys {
 			}
 		}
 	}
-	if v, ok := ag.CommonLabels[LBL_NGRP]; ok {
+
+	if notify.NSys(nsys.Sys) >= notify.NSysUnknown {
+		fmt.Printf("WARN reseting invalid nsys %s\n%v\n",pnsys,ag)
+		nsys.Sys = uint(defsys)
+	}
+	if len(pgrp) > 0 {
+		nsys.Grp = pgrp
+	} else if v, ok := ag.CommonLabels[LBL_NGRP]; ok {
 		nsys.Grp = string(v)
 	} else {
 		cntmap := make(map[string]int,len(ag.Alerts))
@@ -59,13 +75,14 @@ func (am *Amgr)NewNSys(ag alert.AlertGroup, r bool) *db.NSys {
 			}
 		}
 	}
-	nsys.Resolve = r
+	nsys.Resolve = resolve
 	return &nsys
 }
 
 
 func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 
+	fmt.Printf("url: %v\n",r.URL)
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(500)
@@ -80,8 +97,8 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 	if len(r.FormValue("no_resolve")) > 0 {
 		resolve = "false"
 	}
-	am.metrics.groups.With(promp.Labels{"resolve":resolve}).Inc()
-
+	pnsys := r.FormValue("system")
+	pgrp := r.FormValue("group")
 	var ag alert.AlertGroup
 	if err := json.Unmarshal(b, &ag); err != nil {
 		w.WriteHeader(500)
@@ -101,10 +118,17 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 	agkey := ag.Key()
 	nsys := am.db.AGroupNSysGet(ag.StartsAt(),agkey);
 	if nsys == nil {
-		nsys = am.NewNSys(ag,resolve == "true")
+		nsys = am.NewNSys(am.notify.DefSys,pnsys,pgrp,ag,resolve == "true")
 		am.db.AGroupQueueNSysAdd(ag.StartsAt(),*nsys,agkey,ag.Bytes())
 	} else {
 		am.db.AGroupQueueAdd(nsys.Sys,ag.Bytes())
 	}
+
+	ml := promp.Labels{
+		"sys": notify.NSys(nsys.Sys).String(),
+		"grp": nsys.Grp,
+		"resolve":resolve,
+	}
+	am.metrics.groups.With(ml).Inc()
 	am.qmgr.Notify(nsys.Sys)
 }
