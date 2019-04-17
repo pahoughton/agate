@@ -190,11 +190,11 @@ func TestAlertDesc(t *testing.T) {
 		Status: "firing",
 	}
 	exp := `
-From: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
+from: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
 
-When: 2019-02-14 12:34:54.3113 -0700
+when: 2019-02-14 12:34:54.3113 -0700
 
-Labels:
+labels:
        alertname: disk-usage
              app: desktop
           device: /dev/sdb1
@@ -206,11 +206,11 @@ Labels:
       mountpoint: /mnt/wd4blue
             team: storage
 
-Annotations:
+annotations:
           metric: node_filesystem_free_bytes
              sop: https://wiki/disk-usage
 `
-	print(a.Desc())
+	// print(a.Desc())
 	assert.Equal(t,exp,a.Desc())
 }
 

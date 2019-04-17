@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	// "time"
+	"time"
 	pmod "github.com/prometheus/common/model"
 	amgrtmpl "github.com/prometheus/alertmanager/template"
 )
@@ -125,17 +125,22 @@ func (a Alert) Title() string {
 
 func (a Alert) Desc() string {
 
-	desc := "\nFrom: " + a.GeneratorURL + "\n\n"
-	desc += "When: " + a.StartsAt.Format(TIMEFMT) + "\n"
+	desc := "\nfrom: " + a.GeneratorURL + "\n\n"
+	desc += "when: " + a.StartsAt.Format(TIMEFMT) + "\n"
+	var niltime time.Time
+	if a.EndsAt != niltime {
+		desc += "ends: " + a.EndsAt.Format(TIMEFMT) + "\n"
+	}
+
 
 	if len(a.Labels) > 0 {
-		desc  += "\nLabels:\n"
+		desc  += "\nlabels:\n"
 		for _, k := range LabelSet(a.Labels).SortedKeys() {
 			desc += fmt.Sprintf("%16s: %s\n",k,a.Labels[k])
 		}
 	}
 	if len(a.Annotations) > 0 {
-		desc += "\nAnnotations:\n"
+		desc += "\nannotations:\n"
 		for _, k := range LabelSet(a.Annotations).SortedKeys() {
 			desc += fmt.Sprintf("%16s: %s\n",k,a.Annotations[k])
 		}

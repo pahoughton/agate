@@ -76,24 +76,24 @@ func (ag *AlertGroup) Desc() string {
 	if len(ag.Alerts) == 1 {
 		return Alert(ag.Alerts[0]).Desc()
 	}
-
+	desc += "\nalertmanager: " + ag.ExternalURL + "\n"
 	if len(ag.CommonLabels) > 0 {
-		desc  += "\nCommon Labels:\n"
+		desc  += "common labels:\n"
 		for _, k := range LabelSet(ag.CommonLabels).SortedKeys() {
 			desc += fmt.Sprintf("%16s: %s\n",k,ag.CommonLabels[k])
 		}
 	}
 	if len(ag.CommonAnnotations) > 0 {
-		desc  += "\nCommon Annotations:\n"
+		desc  += "\ncommon annotations:\n"
 		for _, k := range LabelSet(ag.CommonAnnotations).SortedKeys() {
 			desc += fmt.Sprintf("%16s: %s\n",k,ag.CommonAnnotations[k])
 		}
 	}
 
-	desc  += fmt.Sprintf("\nAlerts(%d):\n",len(ag.Alerts))
+	desc  += fmt.Sprintf("\nalerts: %d\n",len(ag.Alerts))
 	for i, aga := range ag.Alerts {
 		a := Alert(aga)
-		desc += fmt.Sprintf("\nTitle(%d): %s\n",i+1,a.Title())
+		desc += fmt.Sprintf("\ntitle(%d): %s\n",i+1,a.Title())
 		desc += a.Desc() + "\n"
 	}
 	return desc
