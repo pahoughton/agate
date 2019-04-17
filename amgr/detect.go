@@ -82,7 +82,6 @@ func (am *Amgr)NewNSys(
 
 func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 
-	fmt.Printf("url: %v\n",r.URL)
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(500)
