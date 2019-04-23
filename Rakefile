@@ -107,7 +107,7 @@ task :tarball => [:build_static] do
   sh "mkdir agate-#{version}.amd64"
   sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
   sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
-  sh "tar tzf agate-#{version}.amd64.tar.gz"
+  # sh "tar tzf agate-#{version}.amd64.tar.gz"
 end
 
 desc 'tavis validation'
