@@ -34,7 +34,7 @@ testdeploy:
   only:
     - master@cca-devel/agate
   script:
-    - rake tarbuild
+    - rake tarball
     - >-
       curl -v -T agate-*.amd64.tar.gz
       -u anonymous:anonymous
