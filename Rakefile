@@ -61,7 +61,7 @@ task :build_static do
      "-w -extldflags -static'"
 end
 
-desc 'create tarball'
+desc 'create release tarball'
 task :release => [:test, :build_static] do
   require 'git'
   git = Git.open('.')
@@ -100,8 +100,9 @@ task :release => [:test, :build_static] do
   sh "tar tzf agate-#{version}.amd64.tar.gz"
 end
 
-desc 'f9v0 tarbuild'
-task :tarbuild do
+desc 'create agate-VERSION.amd64.tar.gz'
+task :tarball => [:build_static] do
+  version = File.open('VERSION', &:readline).chomp
   puts "version: #{version}"
   sh "mkdir agate-#{version}.amd64"
   sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
