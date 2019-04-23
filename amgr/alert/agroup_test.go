@@ -126,7 +126,8 @@ func TestAlertGroupDesc(t *testing.T) {
 		return
 	}
 	exp := `
-Common Labels:
+alertmanager: http://cbed:9093
+common labels:
        alertname: disk-usage
              app: desktop
         instance: cbed:9100
@@ -135,18 +136,18 @@ Common Labels:
           mongrp: 01
             team: storage
 
-Common Annotations:
+common annotations:
           metric: node_filesystem_free_bytes
 
-Alerts(3):
+alerts: 3
 
-Title(1): cbed /home/paul/wip/maul/prom-poc/testdata/mnt free 28% below 30%
+title(1): cbed /home/paul/wip/maul/prom-poc/testdata/mnt free 28% below 30%
 
-From: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
+from: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
 
-When: 2019-02-14 12:34:54.3113 -0700
+when: 2019-02-14 12:34:54.3113 -0700
 
-Labels:
+labels:
        alertname: disk-usage
              app: desktop
           device: /dev/loop0
@@ -158,17 +159,17 @@ Labels:
       mountpoint: /home/paul/wip/maul/prom-poc/testdata/mnt
             team: storage
 
-Annotations:
+annotations:
           metric: node_filesystem_free_bytes
 
 
-Title(2): cbed /media/win free 4% below 30%
+title(2): cbed /media/win free 4% below 30%
 
-From: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
+from: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
 
-When: 2019-02-14 12:34:54.3113 -0700
+when: 2019-02-14 12:34:54.3113 -0700
 
-Labels:
+labels:
        alertname: disk-usage
              app: desktop
           device: /dev/nvme0n1p3
@@ -180,17 +181,17 @@ Labels:
       mountpoint: /media/win
             team: storage
 
-Annotations:
+annotations:
           metric: node_filesystem_free_bytes
 
 
-Title(3): cbed /mnt/wd4blue free 22% below 30%
+title(3): cbed /mnt/wd4blue free 22% below 30%
 
-From: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
+from: http://cbed:9090/graph?g0.expr=round%28100+%2A+node_filesystem_free_bytes+%2F+node_filesystem_size_bytes%29+%3C+30&g0.tab=1
 
-When: 2019-02-14 12:34:54.3113 -0700
+when: 2019-02-14 12:34:54.3113 -0700
 
-Labels:
+labels:
        alertname: disk-usage
              app: desktop
           device: /dev/sdb1
@@ -202,7 +203,7 @@ Labels:
       mountpoint: /mnt/wd4blue
             team: storage
 
-Annotations:
+annotations:
           metric: node_filesystem_free_bytes
 
 `

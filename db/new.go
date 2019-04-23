@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	dbFn			= "agate.bolt"
+	db1Fn			= "agate-1.bolt"
+	db0Fn			= "agate.bolt"
 )
 
 type Metrics struct {
@@ -37,7 +38,8 @@ type DB struct {
 
 func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 
-	fn := path.Join(dir,dbFn)
+	os.Remove(path.Join(dir,db0Fn))
+	fn := path.Join(dir,db1Fn)
 	// _, err := os.Stat(fn)
 	// isnew := err != nil || os.IsNotExist(err)
 	opts := &bolt.Options{Timeout: 50 * time.Millisecond}
