@@ -34,11 +34,11 @@ testdeploy:
   only:
     - master@cca-devel/agate
   script:
-   - rake tarbuild
-   - >-
-   curl -v -T agate-*.amd64.tar.gz
-   -u anonymous:anonymous
-   ftp://172.17.0.2/
+    - rake tarbuild
+    - >-
+      curl -v -T agate-*.amd64.tar.gz
+      -u anonymous:anonymous
+      ftp://172.17.0.2/
 
 deploy:
   stage: deploy
