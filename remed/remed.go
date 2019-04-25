@@ -21,19 +21,25 @@ func (r *Remed) remed(a alert.Alert,nid nid.Nid) {
 	out := ""
 
 	if r.AnsibleAvail(a.LabelSet()) {
-		if tmp, err := r.Ansible(a.Node(),a.LabelSet()); err != nil {
+		out += "ansible remed:"
+		tmp, err := r.Ansible(a.Node(),a.LabelSet())
+		if err != nil {
 			r.error(err)
-			out += err.Error()
-		} else {
-			out += tmp
+			out += " ERROR - " + err.Error()
+		}
+		if len(tmp) > 0 {
+			out += "\n" + tmp
 		}
 	}
 	if r.ScriptAvail(a.LabelSet()) {
-		if tmp, err := r.Script(a.Node(),a.LabelSet()); err != nil {
+		out += "script remed:"
+		tmp, err := r.Script(a.Node(),a.LabelSet())
+		if err != nil {
 			r.error(err)
-			out += err.Error()
-		} else {
-			out += tmp
+			out += " ERROR - " + err.Error()
+		}
+		if len(tmp) > 0 {
+			out += "\n" + tmp
 		}
 	}
 	if len(out) < 1 {
