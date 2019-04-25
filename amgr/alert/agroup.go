@@ -10,10 +10,15 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-	amgrnot "github.com/prometheus/alertmanager/notify"
+	amgrtmpl "github.com/prometheus/alertmanager/template"
 )
 
-type AlertGroup amgrnot.WebhookMessage
+type AlertGroup struct {
+	*amgrtmpl.Data
+
+	Version  string `json:"version"`
+	GroupKey string `json:"groupKey"`
+}
 
 func (ag AlertGroup) Key() []byte {
 	if len(ag.Alerts) < 1 {
