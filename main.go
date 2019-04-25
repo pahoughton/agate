@@ -83,7 +83,7 @@ func main() {
 	am.Manage()
 
 	http.Handle("/metrics",promh.Handler())
-	http.Handle("/alerts",am)
+	http.Handle(amgr.Url,am)
 
 	fmt.Println("FATAL: ",http.ListenAndServe(*args.Listen,nil).Error())
 	os.Exit(1)

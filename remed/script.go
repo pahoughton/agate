@@ -31,7 +31,7 @@ func (r *Remed)Script(node string, labels alert.LabelSet) (string, error) {
 
 	aname, ok := labels["alertname"]
 	if ! ok {
-		return "", r.errorf("no alertname label: Ansible(%s,%v)",node,labels)
+		return "", r.errorf("no alertname label: Script(%s,%v)",node,labels)
 	}
 	lfile, err := ioutil.TempFile("/tmp",node)
 	if err != nil {

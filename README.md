@@ -50,6 +50,20 @@ use notify_sys and notify_grp in your alertmanager alert grouping
 
 * agate_node, hostname, node, instance: remediation node
 * agate_title, title, subject: note (issue, ticket) title
+* group_title: note title
+
+## api
+
+* /metrics - prometheus metrics
+* /api/v4/alerts - alertmanager v4 alertgroup
+
+```
+curl $agatehost:$port/metrics
+
+curl -XPOST -d @alert-group.json $agatehost:$port/api/v4/alerts?system=gitlab&group=maul/alerts&no_resolve=true
+
+```
+
 
 ## features
 
