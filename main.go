@@ -15,6 +15,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	proma "github.com/prometheus/client_golang/prometheus/promauto"
+	promp "github.com/prometheus/client_golang/prometheus"
 	promh "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -77,7 +79,16 @@ func main() {
 		os.Setenv("DEBUG","true")
 	}
 
+	bi := proma.NewCounterVec(
+		promp.CounterOpts{
+			Namespace: "agate",
+			Name:      "build_info",
+			Help:      "agate build info",
+		},[]string{"version", "revision", "branch", "goversion"})
+	bi.WithLabelValues(Version, Revision, Branch, GoVersion).Inc()
+
 	am := amgr.New(cfg,*args.DataDir,debug)
+
 
 	fmt.Println("listening on ",*args.Listen)
 	am.Manage()
