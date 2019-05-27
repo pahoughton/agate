@@ -68,7 +68,7 @@ func (am *Amgr)respond(nsys db.NSys, ag alert.AlertGroup) bool {
 			for _, aga := range ag.Alerts {
 				a := alert.Alert(aga)
 				if am.db.AlertNidGet(a.StartsAt,a.Key()) == nil {
-					update += "\n" + a.Title() + "\n" + a.Desc() + "\n"
+					update += "\nfiring: " + a.Title() + "\n" + a.Desc() + "\n"
 					am.db.AlertNidAdd(a.StartsAt,a.Key(),nid.Bytes())
 					am.remed.Remed(a,nid)
 				}
@@ -86,7 +86,7 @@ func (am *Amgr)respond(nsys db.NSys, ag alert.AlertGroup) bool {
 
 				if v := am.db.AlertNidGet(a.StartsAt,a.Key()); v != nil {
 					ncnt += 1
-					update += "\n  " + a.Title()
+					update += "\nresolved: " + a.Title()
 					am.db.AlertNidDel(a.StartsAt,a.Key())
 				}
 			}
