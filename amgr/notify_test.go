@@ -11,12 +11,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"testing"
 	"time"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	amgrtmpl "github.com/prometheus/alertmanager/template"
 	"github.com/pahoughton/agate/config"
+	"github.com/pahoughton/agate/db"
 	"github.com/pahoughton/agate/amgr/alert"
 	"github.com/pahoughton/agate/notify"
 	"github.com/pahoughton/agate/notify/mock"
@@ -55,8 +57,10 @@ func queueAGroups(t *testing.T,nsys uint,am *Amgr,dags ...amgrtmpl.Data) {
 }
 
 func TestNotify(t *testing.T) {
-	os.Remove("testdata/data/agate.bolt")
-	os.Remove("testdata/data/agate-1.bolt")
+	for _, pfn := range db.DbPrevFn {
+		os.Remove(path.Join(tdir,pfn))
+	}
+	os.Remove(path.Join(tdir,db.DbFn))
 
 	today, _ := time.Parse(time.RFC3339, "2019-02-20T13:12:11Z")
 	cfg := config.New()

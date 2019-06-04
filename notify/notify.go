@@ -53,7 +53,10 @@ func (n *Notify) Create(
 			}).Inc()
 			return nid, err
 		} else {
-			n.metrics.errors.Inc()
+			n.metrics.errors.With(promp.Labels{
+				"sys": nsys.String(),
+				"grp": grp,
+			}).Inc()
 			return nid, err
 		}
 	} else {
@@ -62,26 +65,35 @@ func (n *Notify) Create(
 	}
 }
 
-func (n *Notify) Update(nid nid.Nid, msg string) bool {
+func (n *Notify) Update(nid nid.Nid, msg string) error {
 	if n.System(NSys(nid.Sys())) != nil {
 		err := n.System(NSys(nid.Sys())).Update(nid,msg)
 		if err == nil {
-			return true
+			return nil
 		} else {
-			n.metrics.errors.Inc()
+			n.metrics.errors.With(promp.Labels{
+				"sys": NSys(nid.Sys()).String(),
+				"grp": nid.Id(),
+			}).Inc()
+			return err
 		}
 	}
-	return false
+	return fmt.Errorf("invalid nid.sys: %v",nid.Sys())
 }
 
-func (n *Notify) Close(nid nid.Nid, msg string) bool {
+func (n *Notify) Close(nid nid.Nid, msg string) error {
 	if n.System(NSys(nid.Sys())) != nil {
 		err := n.System(NSys(nid.Sys())).Close(nid,msg)
 		if err == nil {
-			return true
+			return nil
 		} else {
-			n.metrics.errors.Inc()
+			n.metrics.errors.With(promp.Labels{
+				"sys": NSys(nid.Sys()).String(),
+				"grp": nid.Id(),
+			}).Inc()
+			return err
 		}
+
 	}
-	return false
+	return fmt.Errorf("invalid nid.sys: %v",nid.Sys())
 }

@@ -1,5 +1,11 @@
 /* 2019-01-07 (cc) <paul4hough@gmail.com>
    gitlab issue interface
+
+FIXME handle:
+bad repo
+bad issue (missing/deleted)
+close closed
+
 */
 package gitlab
 
@@ -42,11 +48,23 @@ func (g *Gitlab)Create(prj, title, desc string, ) (nid.Nid, error) {
 		Title: gl.String(title),
 		Description: gl.String("```\n"+desc+"\n```\n"),
 	})
-	if resp != nil && resp.Body != nil {
-		defer resp.Body.Close()
-	}
 
 	if err != nil {
+		if g.debug {
+			fmt.Printf("dbg ERROR gitlab.CreateIssue: %T %v\n",err,err)
+		}
+		if resp != nil {
+			glresp := string(err.(*gl.ErrorResponse).Body)
+			if prj != g.grp &&
+				strings.Contains(glresp, "Project Not Found") {
+				return g.Create(
+					g.grp, title,
+					"prj default override: "+prj + " to "+g.grp+"\n"+desc)
+			} else {
+				// got unknown error response, non-recoverable
+				panic(err.Error()+"\n\n"+prj+"\n"+title+"\n"+desc)
+			}
+		}
 		return nil, err
 	}
 	if g.debug {

@@ -20,9 +20,9 @@ end
 desc 'validate'
 task :test, [:name] => [:yamllint] do |tasks, args|
   if args[:name]
-    sh "cd #{args[:name]} && go test -v ./..."
+    sh "cd #{args[:name]} && go test -mod=vendor -v ./..."
   else
-    sh 'go test -v ./...'
+    sh 'go test -mod=vendor -v ./...'
   end
 end
 
@@ -94,7 +94,7 @@ task :release => [:test, :build_static] do
     puts "modified or untracked files exists"
     exit 1
   end
-  sh "mkdir agate-#{version}.amd64"
+  sh "[-d agate-#{version}.amd64 ] || mkdir agate-#{version}.amd64"
   sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
   sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
   sh "tar tzf agate-#{version}.amd64.tar.gz"
@@ -104,7 +104,7 @@ desc 'create agate-VERSION.amd64.tar.gz'
 task :tarball => [:build_static] do
   version = File.open('VERSION', &:readline).chomp
   puts "version: #{version}"
-  sh "mkdir agate-#{version}.amd64"
+  sh "test -d agate-#{version}.amd64 || mkdir agate-#{version}.amd64"
   sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
   sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
   # sh "tar tzf agate-#{version}.amd64.tar.gz"

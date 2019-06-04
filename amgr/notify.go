@@ -92,7 +92,12 @@ func (am *Amgr)respond(nsys db.NSys, ag alert.AlertGroup) bool {
 			}
 			if rcnt == len(ag.Alerts) {
 				if am.notify.CloseResolved {
-					if ! am.notify.Close(nid,"\nall resolved:\n" + update) {
+					err := am.notify.Close(nid,"\nall resolved:\n" + update)
+					if err != nil {
+						fmt.Printf("warn close fail: %s retry: %v err: %v\n",
+							notify.NSys(nsys.Sys).String(),
+							am.retry,
+							err)
 						return false
 					}
 				}
@@ -106,7 +111,14 @@ func (am *Amgr)respond(nsys db.NSys, ag alert.AlertGroup) bool {
 			panic("unk status: " + ag.Status )
 		}
 		if len(update) > 0 {
-			return am.notify.Update(nid,update)
+			err := am.notify.Update(nid,update)
+			if err != nil {
+				fmt.Printf("warn update fail: %s retry: %v err: %v\n",
+					notify.NSys(nsys.Sys).String(),
+					am.retry,
+					err)
+				return false
+			}
 		}
 	}
 	return true
