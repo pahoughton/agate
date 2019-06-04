@@ -64,22 +64,15 @@ func (a Alert) LabelSet() LabelSet {
 }
 
 func (a Alert) Key() []byte {
-	if b, err := a.StartsAt.MarshalBinary(); err == nil {
-		k := make([]byte,len(b),len(b)+binary.MaxVarintLen64)
-		copy(k,b)
-		pls := make(pmod.LabelSet,len(a.Labels))
-		for k,v := range a.Labels {
-			pls[pmod.LabelName(k)] = pmod.LabelValue(v)
-		}
-
-		fp := pls.Fingerprint()
-		bfp := make([]byte,binary.MaxVarintLen64)
-
-		fn := binary.PutUvarint(bfp,uint64(fp))
-		return append(k,bfp[:fn]...)
-	} else {
-		panic(err)
+	k := make([]byte,binary.MaxVarintLen64)
+	pls := make(pmod.LabelSet,len(a.Labels))
+	for k,v := range a.Labels {
+		pls[pmod.LabelName(k)] = pmod.LabelValue(v)
 	}
+
+	fp := pls.Fingerprint()
+	fn := binary.PutUvarint(k,uint64(fp))
+	return(k[:fn])
 }
 
 func (a Alert) Name() string {
