@@ -7,18 +7,25 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/pahoughton/agate/db"
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/notify"
 	"github.com/pahoughton/agate/amgr/alert"
 )
+
+const tdir = "testdata/data"
+
 func TestDetect(t *testing.T) {
-	os.Remove("testdata/data/agate.bolt")
-	os.Remove("testdata/data/agate-1.bolt")
+	for _, pfn := range db.DbPrevFn {
+		os.Remove(path.Join(tdir,pfn))
+	}
+	os.Remove(path.Join(tdir,db.DbFn))
 	cfg := config.New()
-	am := New(cfg,"testdata/data",false)
+	am := New(cfg,tdir,false)
 	assert.NotNil(t,am)
 	agq := am.db.AGroupQueueList(uint(am.notify.DefSys))
 	assert.Equal(t,0,len(agq))
@@ -67,10 +74,12 @@ func TestDetect(t *testing.T) {
 }
 
 func TestDetectParams(t *testing.T) {
-
-	os.Remove("testdata/data/agate-1.bolt")
+	for _, pfn := range db.DbPrevFn {
+		os.Remove(path.Join(tdir,pfn))
+	}
+	os.Remove(path.Join(tdir,db.DbFn))
 	cfg := config.New()
-	am := New(cfg,"testdata/data",false)
+	am := New(cfg,tdir,false)
 	assert.NotNil(t,am)
 	agq := am.db.AGroupQueueList(uint(am.notify.DefSys))
 	assert.Equal(t,0,len(agq))

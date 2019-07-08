@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	db1Fn			= "agate-1.bolt"
-	db0Fn			= "agate.bolt"
+	DbFn			= "agate-2.bolt"
 )
+var DbPrevFn = []string{"agate.bolt", "agate-1.bolt"}
 
 type Metrics struct {
 	agqueue		*promp.GaugeVec
@@ -38,8 +38,10 @@ type DB struct {
 
 func New(dir string, mode os.FileMode, maxDays uint,debug bool) (*DB, error) {
 
-	os.Remove(path.Join(dir,db0Fn))
-	fn := path.Join(dir,db1Fn)
+	for _, pfn := range DbPrevFn {
+		os.Remove(path.Join(dir,pfn))
+	}
+	fn := path.Join(dir,DbFn)
 	// _, err := os.Stat(fn)
 	// isnew := err != nil || os.IsNotExist(err)
 	opts := &bolt.Options{Timeout: 50 * time.Millisecond}
