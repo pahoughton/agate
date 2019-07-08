@@ -20,8 +20,12 @@ func (am *Amgr)Notify(nsysid notify.NSys, qid uint64) bool {
 	}
 	nsys := am.db.AGroupNSysGet(ag.StartsAt(),ag.Key())
 	if nsys == nil {
-		fmt.Printf("nsys nil for ag: %v\n",ag.Data)
-		panic("nsys nil")
+		if am.debug {
+			fmt.Printf("debug race nsys nil for ag: %v\n",ag.Data)
+		}
+		// race - duplicate ag w/ deleted twin
+		am.db.AGroupQueueDel(uint(nsysid),qid)
+		return true
 	}
 	if am.respond(*nsys,*ag) {
 		am.db.AGroupQueueDel(uint(nsysid),qid)
