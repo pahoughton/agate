@@ -7,6 +7,11 @@ at_exit {
   puts "run time: #{runtime}"
 }
 
+$app = 'agate'
+$version = File.open('VERSION', &:readline).chomp
+$appver = "#{$app}-#{$version}"
+
+
 task :default do
   sh 'rake --tasks'
   exit 1
@@ -20,9 +25,9 @@ end
 desc 'validate'
 task :test, [:name] => [:yamllint] do |tasks, args|
   if args[:name]
-    sh "cd #{args[:name]} && go test -v ./..."
+    sh "cd #{args[:name]} && go test -mod=vendor -v ./..."
   else
-    sh 'go test -v ./...'
+    sh 'go test -mod=vendor -v ./...'
   end
 end
 
@@ -68,7 +73,6 @@ task :release => [:test, :build_static] do
 
   branch = git.branch
   commit = git.gcommit('HEAD').sha
-  version = File.open('VERSION', &:readline).chomp
   tag = git.tags[-1]
 
   if tag.sha != commit
@@ -94,20 +98,18 @@ task :release => [:test, :build_static] do
     puts "modified or untracked files exists"
     exit 1
   end
-  sh "mkdir agate-#{version}.amd64"
-  sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
-  sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
-  sh "tar tzf agate-#{version}.amd64.tar.gz"
+  puts "version: #{$appver}"
+  sh "test -d #{$appver}.amd64 || mkdir #{$appver}.amd64"
+  sh "cp #{$app} README.md VERSION COPYING #{$appver}.amd64"
+  sh "tar cvzf #{$appver}.amd64.tar.gz #{$appver}.amd64"
 end
 
-desc 'create agate-VERSION.amd64.tar.gz'
+desc "create #{$appver}.amd64.tar.gz"
 task :tarball => [:build_static] do
-  version = File.open('VERSION', &:readline).chomp
-  puts "version: #{version}"
-  sh "mkdir agate-#{version}.amd64"
-  sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
-  sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
-  # sh "tar tzf agate-#{version}.amd64.tar.gz"
+  puts "version: #{$appver}"
+  sh "test -d #{$appver}.amd64 || mkdir #{$appver}.amd64"
+  sh "cp #{$app} README.md VERSION COPYING #{$appver}.amd64"
+  sh "tar cvzf #{$appver}.amd64.tar.gz #{$appver}.amd64"
 end
 
 desc 'tavis validation'

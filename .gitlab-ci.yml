@@ -9,26 +9,26 @@ variables:
 build:
   image: $GOIMG
   stage: build
-  cache:
+  artifacts:
     paths:
       - agate
-  artifacts:
+  cache:
     paths:
       - agate
   script:
     - rake build_static
 
 yamllint:
-  image: $CI_REGISTRY/cca/docks/yamllint
+  image: $CI_REGISTRY/cca/cca/yamllint
   script:
-    - rake yamllint
+    - yamllint .gitlab-ci.yml .travis.yml config
 
 test:
   image: $GOIMG
   script:
     - go test -v -mod=vendor ./...
 
-testdeploy:
+devdeploy:
   image: $GOIMG
   stage: deploy
   only:
