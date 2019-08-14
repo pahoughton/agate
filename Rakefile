@@ -7,23 +7,31 @@ at_exit {
   puts "run time: #{runtime}"
 }
 
+$app = 'agate'
+$version = File.open('VERSION', &:readline).chomp
+$appver = "#{$app}-#{$version}"
+
+
 task :default do
   sh 'rake --tasks'
   exit 1
 end
 
+desc 'lint yml files'
 task :yamllint do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
 end
 
+desc 'validate'
 task :test, [:name] => [:yamllint] do |tasks, args|
   if args[:name]
-    sh "cd #{args[:name]} && go test -v ./..."
+    sh "cd #{args[:name]} && go test -mod=vendor -v ./..."
   else
-    sh 'go test -v ./...'
+    sh 'go test -mod=vendor -v ./...'
   end
 end
 
+desc 'compile'
 task :build do
   sh 'go build -mod=vendor'
   sh 'cd mock-ticket && go build -mod=vendor'
@@ -37,15 +45,18 @@ task :vprov do
   sh 'cd test && vagrant provision'
 end
 
+desc 'create static binary'
 task :build_static do
   require 'git'
   git = Git.open('.')
 
   branch = git.branch
   commit = git.gcommit('HEAD').sha
-  version = File.open('VERSION', &:readline).chomp
-  tag = git.tags[-1]
-
+  if ENV['CI_COMMIT_TAG']
+    version = ENV['CI_COMMIT_TAG']
+  else
+    version = File.open('VERSION', &:readline).chomp
+  end
   sh 'go build -mod=vendor ' + \
      "-tags netgo -ldflags '" +\
      "-X main.Version=#{version} " +\
@@ -55,13 +66,13 @@ task :build_static do
      "-w -extldflags -static'"
 end
 
+desc 'create release tarball'
 task :release => [:test, :build_static] do
   require 'git'
   git = Git.open('.')
 
   branch = git.branch
   commit = git.gcommit('HEAD').sha
-  version = File.open('VERSION', &:readline).chomp
   tag = git.tags[-1]
 
   if tag.sha != commit
@@ -87,12 +98,21 @@ task :release => [:test, :build_static] do
     puts "modified or untracked files exists"
     exit 1
   end
-  sh "mkdir agate-#{version}.amd64"
-  sh "cp agate README.md VERSION COPYING agate-#{version}.amd64"
-  sh "tar czf agate-#{version}.amd64.tar.gz agate-#{version}.amd64"
-  sh "tar tzf agate-#{version}.amd64.tar.gz"
+  puts "version: #{$appver}"
+  sh "test -d #{$appver}.amd64 || mkdir #{$appver}.amd64"
+  sh "cp #{$app} README.md VERSION COPYING #{$appver}.amd64"
+  sh "tar cvzf #{$appver}.amd64.tar.gz #{$appver}.amd64"
 end
 
+desc "create #{$appver}.amd64.tar.gz"
+task :tarball => [:build_static] do
+  puts "version: #{$appver}"
+  sh "test -d #{$appver}.amd64 || mkdir #{$appver}.amd64"
+  sh "cp #{$app} README.md VERSION COPYING #{$appver}.amd64"
+  sh "tar cvzf #{$appver}.amd64.tar.gz #{$appver}.amd64"
+end
+
+desc 'tavis validation'
 task :travis do
   sh "yamllint -f parsable .travis.yml .gitlab-ci.yml test config"
   sh 'go test -v ./...'

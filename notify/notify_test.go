@@ -76,10 +76,10 @@ func TestCrud(t *testing.T) {
 	assert.Equal(t,strconv.Itoa(nsys.mock.Nid),nid.Id())
 	expHits += 1
 	assert.Equal(t,expHits,nsys.mock.Hits)
-	assert.True(t,obj.Update(nid,desc))
+	assert.Nil(t,obj.Update(nid,desc))
 	expHits += 1
 	assert.Equal(t,expHits,nsys.mock.Hits)
-	assert.True(t,obj.Close(nid,desc))
+	assert.Nil(t,obj.Close(nid,desc))
 	expHits += 2
 	assert.Equal(t,expHits,nsys.mock.Hits)
 
@@ -90,10 +90,10 @@ func TestCrud(t *testing.T) {
 	assert.NotNil(t,nid)
 	expHits += 1
 	assert.Equal(t,expHits,nsys.gitlab.Hits)
-	assert.True(t,obj.Update(nid,desc))
+	assert.Nil(t,obj.Update(nid,desc))
 	expHits += 1
 	assert.Equal(t,expHits,nsys.gitlab.Hits)
-	assert.True(t,obj.Close(nid,desc))
+	assert.Nil(t,obj.Close(nid,desc))
 	expHits += 2
 	assert.Equal(t,expHits,nsys.gitlab.Hits)
 
@@ -103,10 +103,10 @@ func TestCrud(t *testing.T) {
 	assert.NotNil(t,nid)
 	expHits += 1
 	assert.Equal(t,expHits,nsys.hpsm.Hits)
-	assert.True(t,obj.Update(nid,desc))
+	assert.Nil(t,obj.Update(nid,desc))
 	expHits += 1
 	assert.Equal(t,expHits,nsys.hpsm.Hits)
-	assert.True(t,obj.Close(nid,desc))
+	assert.Nil(t,obj.Close(nid,desc))
 	expHits += 1
 	assert.Equal(t,expHits,nsys.hpsm.Hits)
 }

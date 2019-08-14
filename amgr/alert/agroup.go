@@ -76,12 +76,11 @@ func (ag AlertGroup) Title() string {
 }
 
 func (ag *AlertGroup) Desc() string {
-	var desc string
 
+	desc := "\nalertmanager: " + ag.ExternalURL + "\n"
 	if len(ag.Alerts) == 1 {
-		return Alert(ag.Alerts[0]).Desc()
+		return desc + Alert(ag.Alerts[0]).Desc()
 	}
-	desc += "\nalertmanager: " + ag.ExternalURL + "\n"
 	if len(ag.CommonLabels) > 0 {
 		desc  += "common labels:\n"
 		for _, k := range LabelSet(ag.CommonLabels).SortedKeys() {

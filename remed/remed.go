@@ -46,8 +46,8 @@ func (r *Remed) remed(a alert.Alert,nid nid.Nid) {
 		out = a.Name() + " no remed output"
 		r.errorf(out)
 	}
-	if r.notify.Update(nid,out) == false {
-		r.errorf("remed notify(%s) update\n%v",nid.Id(),out)
+	if err := r.notify.Update(nid,out); err != nil {
+		r.errorf("remed notify(%s) %v update\n%v",nid.Id(),err,out)
 	}
 }
 

@@ -1,0 +1,11 @@
+[
+  {
+    "labels": {
+      "alertname": "log-http-error",
+      "notify_grp": "ywi9/alert"
+    },
+    "annotations": {
+      "info": "errors found in splunk:http error log"
+    }
+  }
+]

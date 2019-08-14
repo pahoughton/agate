@@ -10,10 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const tdir = "testdata"
+
 func testit(t *testing.T, check func(t *testing.T,db *DB)) {
 
-	os.Remove(path.Join("testdata",db1Fn))
-	os.Remove(path.Join("testdata",db0Fn))
+	for _, pfn := range DbPrevFn {
+		os.Remove(path.Join(tdir,pfn))
+	}
+	os.Remove(path.Join(tdir,DbFn))
 	db, err := New("testdata",0664,5,true)
 	require.Nil(t,err)
 	require.NotNil(t,db)

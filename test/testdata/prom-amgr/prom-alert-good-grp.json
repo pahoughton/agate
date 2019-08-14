@@ -1,0 +1,13 @@
+[
+  {
+    "labels": {
+      "alertname": "log-http-error",
+      "notify_grp": "ywi9/alerts"
+    },
+    "startsAt": "2019-06-04T12:35:23+00:00",
+    "endsAt": "2019-06-04T12:40:23+00:00",
+    "annotations": {
+      "info": "errors found in splunk:http error log"
+    }
+  }
+]

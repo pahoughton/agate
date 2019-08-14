@@ -237,11 +237,12 @@ func TestAlertKey(t *testing.T) {
 	got := a.Key()
 	assert.Equal(t,exp,got)
 
+	/* StartsAt removed from Key
 	a.StartsAt = time.Now()
 	got = a.Key()
 	assert.NotEqual(t,exp,got)
-
 	exp = got
+    */
 	a.Labels["agate_node"] = "cbEd"
 	got = a.Key()
 	assert.NotEqual(t,exp,got)

@@ -2,18 +2,51 @@
 #
 ---
 variables:
+  GOIMG: $CI_REGISTRY/cca/docks/golang
+  DOCK: $CI_REGISTRY/$CI_PROJECT_PATH
   GOCACHE: /tmp/go-cache
 
 build:
-  image: $CI_REGISTRY/registry/hub.docker.com/golang:1.11.5-stretch
+  image: $GOIMG
   stage: build
   artifacts:
     paths:
       - agate
+  cache:
+    paths:
+      - agate
   script:
-    - go build -mod=vendor
+    - rake build_static
 
 yamllint:
-  image: $CI_REGISTRY/coreco-automation/images/yamllint
+  image: $CI_REGISTRY/cca/cca/yamllint
   script:
-    - yamllint .gitlab-ci.yml test config
+    - yamllint .gitlab-ci.yml .travis.yml config
+
+test:
+  image: $GOIMG
+  script:
+    - go test -v -mod=vendor ./...
+
+devdeploy:
+  image: $GOIMG
+  stage: deploy
+  only:
+    - master@cca-devel/agate
+  script:
+    - rake tarball
+    - >-
+      curl -v -T agate-*.amd64.tar.gz
+      -u anonymous:anonymous
+      ftp://172.17.0.2/
+
+deploy:
+  stage: deploy
+  image: $CI_REGISTRY/registry/hub.docker.com/docker:18.05.0-ce
+  only:
+    - tags@cca/maul/agate
+  script:
+    - docker build -t $DOCK:$CI_COMMIT_TAG .
+    - docker tag $DOCK:$CI_COMMIT_TAG $DOCK:latest
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker push $DOCK

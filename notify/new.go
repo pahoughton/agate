@@ -44,7 +44,7 @@ var (
 
 type metrics struct {
 	notes		*promp.CounterVec
-	errors		promp.Counter
+	errors		*promp.CounterVec
 }
 
 type Notify struct {
@@ -87,17 +87,20 @@ func New(cfg config.Notify, dbg bool) *Notify {
 					Namespace:	"agate",
 					Subsystem:	"notes",
 					Name:		"generated",
-					Help:		"number of ticekts created",
+					Help:		"number of notes created",
 				}, []string{
 					"sys",
 					"grp",
 				}),
-			errors: proma.NewCounter(
+			errors: proma.NewCounterVec(
 				promp.CounterOpts{
 					Namespace:	"agate",
 					Subsystem:	"notify",
 					Name:		"errors",
-					Help:		"number of ticket errors",
+					Help:		"number of notify errors",
+				}, []string{
+					"sys",
+					"grp",
 				}),
 		},
 	}
@@ -126,12 +129,6 @@ func (n *Notify) unregister() {
 		promp.Unregister(n.metrics.notes);
 		n.metrics.notes = nil
 	}
-}
-
-func (n *Notify) Errorf(format string, args ...interface{}) error {
-	n.metrics.errors.Inc()
-	fmt.Println("ERROR: ",fmt.Sprintf(format,args...))
-	return fmt.Errorf(format,args...)
 }
 
 func (n *Notify) System(nsys NSys) System {
