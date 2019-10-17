@@ -21,11 +21,7 @@ type AlertGroup struct {
 }
 
 func (ag AlertGroup) Key() []byte {
-	if len(ag.Alerts) < 1 {
-		panic("no alerts in alertgroup")
-	} else {
-		return Alert(ag.Alerts[0]).Key()
-	}
+	return []byte(ag.GroupKey)
 }
 func (ag AlertGroup) Bytes() []byte {
 	var b bytes.Buffer

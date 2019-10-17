@@ -21,19 +21,14 @@ const (
 	Url = "/api/v4/alerts"
 )
 
-func (am *Amgr)NewNSys(
-	defsys		notify.NSys,
-	pnsys, pgrp	string,
-	ag			alert.AlertGroup,
-	resolve		bool,
-) *db.NSys {
+func (am *Amgr)detectNSysGrp(pnsys, pgrp string, ag alert.AlertGroup ) (sys, grp string) {
 
-	nsys := db.NSys{Sys: uint(defsys)}
+
 
 	if len(pnsys) > 0 {
-		nsys.Sys = uint(notify.NewNSys(pnsys))
+		sys = pnsys
 	} else if v, ok := ag.CommonLabels[LBL_NSYS]; ok {
-		nsys.Sys = uint(notify.NewNSys(string(v)))
+		sys = string(v)
 	} else {
 		cntmap := make(map[string]int,len(ag.Alerts))
 		for _, a := range ag.Alerts {
@@ -41,24 +36,27 @@ func (am *Amgr)NewNSys(
 				cntmap[v] += 1
 			}
 		}
-		nsys.Sys = uint(am.notify.DefSys)
+		sys = am.notify.DefSys()
 		max := 0
 		for k, c := range cntmap {
 			if c > max {
-				nsys.Sys = uint(notify.NewNSys(k))
+				sys = k
 				max = c
 			}
 		}
 	}
-
-	if notify.NSys(nsys.Sys) >= notify.NSysUnknown {
+	if ! notify.ValidSys(sys) {
 		fmt.Printf("WARN reseting invalid nsys %s\n%v\n",pnsys,ag)
-		nsys.Sys = uint(defsys)
+		am.metrics.errors.nsys.With(promp.Labels{
+			"sys": sys,
+		}).Inc()
+		sys = am.notify.DefSys()
 	}
+
 	if len(pgrp) > 0 {
-		nsys.Grp = pgrp
+		grp = pgrp
 	} else if v, ok := ag.CommonLabels[LBL_NGRP]; ok {
-		nsys.Grp = string(v)
+		grp = string(v)
 	} else {
 		cntmap := make(map[string]int,len(ag.Alerts))
 		for _, a := range ag.Alerts {
@@ -66,17 +64,16 @@ func (am *Amgr)NewNSys(
 				cntmap[v] += 1
 			}
 		}
-		nsys.Grp = am.notify.Group(notify.NSys(nsys.Sys))
+		grp = am.notify.Group(sys)
 		max := 0
 		for k, c := range cntmap {
 			if c > max {
-				nsys.Grp = k
+				grp = k
 				max = c
 			}
 		}
 	}
-	nsys.Resolve = resolve
-	return &nsys
+	return sys, grp
 }
 
 
@@ -114,20 +111,42 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 		panic("unsupported version")
 	}
 
-	agkey := ag.Key()
-	nsys := am.db.AGroupNSysGet(ag.StartsAt(),agkey);
-	if nsys == nil {
-		nsys = am.NewNSys(am.notify.DefSys,pnsys,pgrp,ag,resolve == "true")
-		am.db.AGroupQueueNSysAdd(ag.StartsAt(),*nsys,agkey,ag.Bytes())
-	} else {
-		am.db.AGroupQueueAdd(nsys.Sys,ag.Bytes())
-	}
+	// convert
+	nsys, ngrp = am.detectNSysGrp(pnsys,pgrp,ag)
 
+	alerts := make([]pmod.LabelSet,len(ag.Alerts))
+	remed :=  make([]pmod.LabelSet,len(ag.Alerts))
+	remedCnt := 0
+	for _, a := range ag.Alerts {
+		als := a.Labels
+		als["status"] = a.Status
+		als["starts_at"] = a.StartsAt
+		if len(a.EndsAt) > 0 {
+			als["ends_at"] = a.EndsAt
+		}
+		alerts = append(alerts,als)
+		if am.remed.HasRemed(als) {
+			remed = append(remed,als)
+		}
+	}
+	// queue notify & remed
+	nkey := am.notify.Queue(
+		sys,grp,ag.Key(),
+		ag.Title(),
+		ag.Desc(),
+		ag.CommonLabels,
+		alerts,
+		remedCnt,
+		resolve == "true")
+
+	for _, a := range remed {
+		am.remed.Queue(a,nkey,a["status"] == "resolved")
+	}
+	// metrics
 	ml := promp.Labels{
 		"sys": notify.NSys(nsys.Sys).String(),
 		"grp": nsys.Grp,
 		"resolve":resolve,
 	}
 	am.metrics.groups.With(ml).Inc()
-	am.qmgr.Notify(nsys.Sys)
 }
