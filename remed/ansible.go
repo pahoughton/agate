@@ -16,27 +16,16 @@ import (
 	"path"
 
 	promp "github.com/prometheus/client_golang/prometheus"
-	"github.com/pahoughton/agate/amgr/alert"
+	pmod "github.com/prometheus/common/model"
 )
 
-func (r *Remed) AnsibleAvail(labels alert.LabelSet) bool {
-	aname, ok := labels["alertname"]
-	if ok {
-		ardir := path.Join(r.playbookDir,"roles",string(aname))
-		finfo, err := os.Stat(ardir)
-		return err == nil && finfo.IsDir()
-	} else {
-		return ok
-	}
+func (r *Remed) AnsibleAvail(task string) bool {
+	ardir := path.Join(r.playbookDir,"roles",task)
+	finfo, err := os.Stat(ardir)
+	return err == nil && finfo.IsDir()
 }
 
-func (r *Remed)Ansible( node string, labels alert.LabelSet) (string, error) {
-	taname, ok := labels["alertname"]
-	if ! ok {
-		return "", r.errorf("no alertname label: Ansible(%s,%v)",node,labels)
-	}
-	aname := string(taname)
-
+func (r *Remed)Ansible(task string, node string, labels pmod.LabelSet) (string, error) {
 	// create inventory file for ansible
 	invfile, err := ioutil.TempFile("/tmp", "inventory")
 	if err != nil {
@@ -76,7 +65,7 @@ func (r *Remed)Ansible( node string, labels alert.LabelSet) (string, error) {
 		return "", r.errorf("Close: %s",err.Error())
 	}
 
-	arole := "agate_role=" + aname
+	arole := "agate_role=" + task
 
 	cmdargs := []string{"-i",invfile.Name(),"-e",arole,pbfile.Name()}
 
@@ -102,7 +91,7 @@ func (r *Remed)Ansible( node string, labels alert.LabelSet) (string, error) {
 	}
 
 	r.metrics.ansible.With(
-		promp.Labels{"role": aname,"status": cmdstatus}).Inc()
+		promp.Labels{"role": task,"status": cmdstatus}).Inc()
 
 	return out, err
 }

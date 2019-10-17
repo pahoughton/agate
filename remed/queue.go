@@ -4,44 +4,53 @@
 package remed
 
 import (
-	"testing"
+	"errors"
+	"encoding/binary"
+	pmod "github.com/prometheus/common/model"
+	"github.com/boltdb/bolt"
 )
 
-const (
-	taskName = "alertname"
-	bucketName = "remed"
-)
 
 // todo - what if never receive resolve?
 // remediated & unresolved metric
-func (r *Remed) Queue(n pmod.LabelSet, nkey []byte, resolved bool) {
+func (r *Remed) Queue(labels pmod.LabelSet, nkey []byte, resolved bool) {
 
-	if ! n[taskName] || ! r.Has(n[taskName]) {
+	if task, ok := labels[taskName]; ! ok  || ! r.HasRemed(string(task)) {
 		return
 	}
 
-	err := db.db.Update(func(tx *bolt.Tx) error {
+	bkey := make([]byte,binary.MaxVarintLen64)
+	kl := binary.PutUvarint(bkey,uint64(labels.Fingerprint()))
 
-		if b := tx.Bucket(bucketName); b != nil {
+	err := r.db.Update(func(tx *bolt.Tx) error {
 
-			keyBuf := make([]byte,binary.MaxVarintLen64)
-			kl := binary.PutUvarint(keyBuf,n.Fingerprint())
-			if v := b.Get(keyBuf[:kl]); v != nil {
+		if b := tx.Bucket([]byte(bucketName)); b != nil {
+
+			if v := b.Get(bkey[:kl]); v != nil {
 				// remediation has been fired
 				if resolved {
 					r.metrics.unres.Dec()
-					return b.Del(keyBuf[:kl])
+					return b.Delete(bkey[:kl])
+				} else {
+					return nil
 				}
 			} else if ! resolved {
 				// new unresolved
-				if err := b.Put(keyBuf[:kl]); err == nil {
+				if err := b.Put(bkey[:kl],[]byte("rem")); err == nil {
 					r.metrics.unres.Inc()
-					return r.Do(n,nkey)
+					r.Remed(string(labels[pmod.LabelName(taskName)]),labels,nkey)
+					return nil
+				} else {
+					return err
 				}
+			} else {
+				return nil
 			}
 		} else {
 			panic( "remed queue not initialized" )
+			return errors.New("remed q")
 		}
+
 	})
 	if err != nil {
 		panic(err)

@@ -13,27 +13,18 @@ import (
 	"gopkg.in/yaml.v2"
 
 	promp "github.com/prometheus/client_golang/prometheus"
-	"github.com/pahoughton/agate/amgr/alert"
+	pmod "github.com/prometheus/common/model"
 )
 
-func (r *Remed) ScriptAvail(labels alert.LabelSet) bool {
-	aname, ok := labels["alertname"]
-	if ok {
-		fn := path.Join(r.scriptsDir,string(aname))
-		finfo, err := os.Stat(fn)
-		return err == nil && finfo.Mode().Perm() & 0550 != 0
-	} else {
-		return ok
-	}
+func (r *Remed) ScriptAvail(task string) bool {
+	fn := path.Join(r.scriptsDir,task)
+	finfo, err := os.Stat(fn)
+	return err == nil && finfo.Mode().Perm() & 0550 != 0
 }
 
-func (r *Remed)Script(node string, labels alert.LabelSet) (string, error) {
+func (r *Remed)Script(task string, labels pmod.LabelSet) (string, error) {
 
-	aname, ok := labels["alertname"]
-	if ! ok {
-		return "", r.errorf("no alertname label: Script(%s,%v)",node,labels)
-	}
-	lfile, err := ioutil.TempFile("/tmp",node)
+	lfile, err := ioutil.TempFile("/tmp",task)
 	if err != nil {
 		return "", r.errorf("ioutil.TempFile: %s",err.Error())
 	}
@@ -52,9 +43,9 @@ func (r *Remed)Script(node string, labels alert.LabelSet) (string, error) {
 	if r.debug {
 		os.Setenv("DEBUG","1")
 	}
-	scriptfn := path.Join(r.scriptsDir,string(string(aname)))
+	scriptfn := path.Join(r.scriptsDir,task)
 
-	cmdargs := []string{node,lfile.Name()}
+	cmdargs := []string{lfile.Name()}
 
 	cmdout, err := exec.Command(scriptfn,cmdargs...).CombinedOutput()
 
@@ -79,7 +70,7 @@ func (r *Remed)Script(node string, labels alert.LabelSet) (string, error) {
 
 	r.metrics.scripts.With(
 		promp.Labels{
-			"script": string(labels["alertname"]),
+			"script": task,
 			"status": cmdstatus,
 		}).Inc()
 

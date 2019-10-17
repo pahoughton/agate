@@ -8,9 +8,15 @@ import (
 	"sync"
 	promp "github.com/prometheus/client_golang/prometheus"
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/boltdb/bolt"
 
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/notify"
+)
+
+const (
+	taskName = "alertname"
+	bucketName = "remed"
 )
 
 type Metrics struct {
@@ -18,6 +24,7 @@ type Metrics struct {
 	scripts		*promp.CounterVec
 	remedq		promp.Gauge
 	remedm		promp.Gauge
+	unres		promp.Gauge
 	errors		promp.Counter
 }
 
@@ -29,16 +36,18 @@ type Remed struct {
 	parallel		int32
 	wg				sync.WaitGroup
 	metrics			Metrics
+	db				*bolt.DB
 	notify			*notify.Notify
 }
 
-func New(c config.Remed, n *notify.Notify, dbg bool) *Remed {
+func New(c config.Remed, n *notify.Notify, db *bolt.DB, dbg bool) *Remed {
 	r := &Remed{
 		debug:			dbg,
 		playbookDir:	c.PlaybookDir,
 		scriptsDir:		c.ScriptsDir,
 		parallel:		int32(c.Parallel),
 		notify:			n,
+		db:				db,
 		metrics:		Metrics{
 			ansible: proma.NewCounterVec(
 				promp.CounterOpts{
@@ -67,6 +76,13 @@ func New(c config.Remed, n *notify.Notify, dbg bool) *Remed {
 					Name:      "errors",
 					Help:      "number of errors",
 				}),
+			unres: proma.NewGauge(
+				promp.GaugeOpts{
+					Namespace: "agate",
+					Subsystem: "remed",
+					Name:      "unres",
+					Help:      "number remediated unresolved",
+				}),
 			remedq: proma.NewGauge(
 				promp.GaugeOpts{
 					Namespace: "agate",
@@ -84,6 +100,14 @@ func New(c config.Remed, n *notify.Notify, dbg bool) *Remed {
 		},
 	}
 	r.metrics.remedm.Set(float64(r.parallel))
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(bucketName))
+		return err
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	return r
 }
