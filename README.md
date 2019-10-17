@@ -52,6 +52,9 @@ use notify_sys and notify_grp in your alertmanager alert grouping
 * agate_title, title, subject: note (issue, ticket) title
 * group_title: note title
 
+* rem_timeout: golang duration (5s, 10m, 4h ...) max run duration
+* rem_first: only notify if remediation fails
+
 ## api
 
 * /metrics - prometheus metrics
