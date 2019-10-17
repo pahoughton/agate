@@ -16,6 +16,13 @@ import (
 	promp "github.com/prometheus/client_golang/prometheus"
 )
 
+/* pah */
+type Key []byte
+func (n *Notify) UpdateNote(k Key, text string) bool {
+	print("STUB")
+	return false
+}
+
 type System interface {
 	Create(goup, title, desc string) (nid.Nid, error)
 	Update(nid nid.Nid, desc string) error

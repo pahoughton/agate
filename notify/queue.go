@@ -4,7 +4,7 @@ store and q note for notify sys
 returns notice key
 */
 package notify
-
+/*
 import (
 )
 
@@ -68,3 +68,4 @@ func (n *Notify) Queue(
 	}
 	n.queue[qkey] <- nkey
 }
+*/
