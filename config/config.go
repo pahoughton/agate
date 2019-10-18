@@ -57,6 +57,7 @@ type Notify struct {
 	Default		string		`yaml:"default,omitempty"`
 	Resolved	bool		`yaml:"close-resolved,omitempty"`
 	Sys			NotifySys	`yaml:"systems,omitempty"`
+	NQDepth		uint		`yaml:"nqdepth,omitempty"`
 }
 type Config struct {
 	Global		Global		`yaml:"global,omitempty"`
@@ -78,8 +79,9 @@ func New() (*Config) {
 			CfgPlaybookDir: "playbook",
 		},
 		Notify: Notify{
-			Default: "mock",
+			Default:  "mock",
 			Resolved: true,
+			NQDepth:  32,
 			Sys: NotifySys{
 				Gitlab: NSysGitlab{
 					Url: "https://gitlab.com",

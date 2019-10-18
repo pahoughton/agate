@@ -10,10 +10,11 @@ import (
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 
+	"github.com/boltdb/bolt"
+
 	"github.com/pahoughton/agate/config"
  	"github.com/pahoughton/agate/notify"
 	"github.com/pahoughton/agate/remed"
-	"github.com/pahoughton/agate/db"
 )
 
 type Metrics struct {
@@ -25,17 +26,16 @@ type Metrics struct {
 
 type Amgr struct {
 	debug	bool
-	db		*db.DB
-	qmgr	*Manager
+	db		*bolt.DB
 	notify	*notify.Notify
 	remed	*remed.Remed
 	retry	time.Duration
 	metrics	Metrics
 }
 
-func New(c *config.Config,dataDir string,dbg bool) *Amgr {
+func New(c *config.Config,db *bolt.DB,dbg bool) *Amgr {
 
-	adb, err := db.New(dataDir, 0664, c.Global.DataAge,dbg);
+
 	if err != nil {
 		panic(err)
 	}
@@ -43,8 +43,7 @@ func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 	am := &Amgr{
 		debug:		dbg,
 		retry:		c.Global.Retry,
-		db:			adb,
-		qmgr:		NewManager(),
+		db:			db,
 		notify:		n,
 		remed:		remed.New(c.Remed,n,dbg),
 		metrics: Metrics{

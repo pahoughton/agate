@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/pahoughton/agate/db"
 	"github.com/pahoughton/agate/amgr/alert"
 	"github.com/pahoughton/agate/notify"
 	"github.com/pahoughton/agate/notify/nid"
 )
-
+/*
 func (am *Amgr)Notify(nsysid notify.NSys, qid uint64) bool {
 
 	ag := alert.NewAlertGroup(am.db.AGroupQueueGet(uint(nsysid),qid))
@@ -113,3 +112,4 @@ func (am *Amgr)respond(nsys db.NSys, ag alert.AlertGroup) bool {
 	}
 	return true
 }
+*/

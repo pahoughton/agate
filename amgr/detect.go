@@ -1,6 +1,6 @@
 /* 2019-02-14 (cc) <paul4hough@gmail.com>
    alertmanager alert handler
-   add body to data store and notify manager
+   queue for notify & remediation as needed
 */
 package amgr
 
@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	promp "github.com/prometheus/client_golang/prometheus"
-	"github.com/pahoughton/agate/db"
 	"github.com/pahoughton/agate/amgr/alert"
 	"github.com/pahoughton/agate/notify"
 )
@@ -22,8 +21,6 @@ const (
 )
 
 func (am *Amgr)detectNSysGrp(pnsys, pgrp string, ag alert.AlertGroup ) (sys, grp string) {
-
-
 
 	if len(pnsys) > 0 {
 		sys = pnsys
@@ -116,7 +113,6 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 
 	alerts := make([]pmod.LabelSet,len(ag.Alerts))
 	remed :=  make([]pmod.LabelSet,len(ag.Alerts))
-	remedCnt := 0
 	for _, a := range ag.Alerts {
 		als := a.Labels
 		als["status"] = a.Status
@@ -136,7 +132,7 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 		ag.Desc(),
 		ag.CommonLabels,
 		alerts,
-		remedCnt,
+		len(remed),
 		resolve == "true")
 
 	for _, a := range remed {
