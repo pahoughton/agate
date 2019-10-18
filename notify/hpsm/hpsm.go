@@ -13,7 +13,6 @@ import (
 	"net/http"
 
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/notify/nid"
 )
 
 const (
@@ -35,7 +34,7 @@ const (
 )
 
 type Hpsm struct {
-	tsys		uint8
+	name		string
 	grp			string
 	debug		bool
 	BaseUrl		string
@@ -181,9 +180,9 @@ type In3RespIncident struct {
 	IncidentID	string		`xml:"IncidentID,omitempty"`
 }
 
-func New(cfg config.NSysHpsm, tsys int, dbg bool) *Hpsm {
+func New(cfg config.NSysHpsm, name string, dbg bool) *Hpsm {
 	h := &Hpsm{
-		tsys:		uint8(tsys),
+		name:		name,
 		debug:		dbg,
 		grp:		cfg.Group,
 		BaseUrl:	cfg.Url,
@@ -275,7 +274,7 @@ func (h *Hpsm) PostSoap(url, sact string, reqObj, resp interface{}) error {
 
 }
 
-func (h *Hpsm) Create(wg, title, desc string) (nid.Nid, error) {
+func (h *Hpsm) Create(wg, title, desc string) ([]byte, error) {
 
 	ir := &CreateIncidentRequest{
 		Incident:	In2ReqIncident{
@@ -315,16 +314,16 @@ func (h *Hpsm) Create(wg, title, desc string) (nid.Nid, error) {
 	if h.debug {
 		fmt.Println("hpsm create ID: "+respEnv.Body.Resp.Incident.IncidentID)
 	}
-	return nid.NewString(h.tsys,respEnv.Body.Resp.Incident.IncidentID), nil
+	return []byte(respEnv.Body.Resp.Incident.IncidentID), nil
 
 }
 
-func (h *Hpsm)Update(id nid.Nid, cmt string) error {
+func (h *Hpsm)Update(id []byte, cmt string) error {
 
 	ir := UpdateIncidentRequest{
 		Incident:	In2ReqIncident{
 			CurrentUpdate:		cmt,
-			IncidentID:			id.Id(),
+			IncidentID:			string(id),
 		},
 	}
 
@@ -352,13 +351,13 @@ func (h *Hpsm)Update(id nid.Nid, cmt string) error {
 	return nil
 }
 
-func (h *Hpsm)Close(id nid.Nid, cmt string) error {
+func (h *Hpsm)Close(id []byte, cmt string) error {
 
 	ir := CloseIncidentRequest{
 		Incident:	Incident3{
 			Assignee:		"ip_soft_int",
 			ClosureCode:	"Automatically Closed",
-			IncidentID:		id.Id(),
+			IncidentID:		string(id),
 			Solution:		cmt,
 			Status:			"Resolved",
 		},

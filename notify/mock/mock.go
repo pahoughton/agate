@@ -11,18 +11,17 @@ import (
 	"net/http"
 
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/notify/nid"
 )
 
 type Mock struct {
-	tsys	uint8
+	name	string
 	debug	bool
 	url		string
 }
 
-func New(cfg config.NSysMock,tsys int,debug bool) *Mock {
+func New(cfg config.NSysMock,name string,debug bool) *Mock {
 	return &Mock{
-		tsys:	uint8(tsys),
+		name:	name,
 		debug:	debug,
 		url:	cfg.Url,
 	}
@@ -32,7 +31,7 @@ func (m *Mock)Group() string {
 	return ""
 }
 
-func (m *Mock)Create(grp,title,desc string) (nid.Nid, error) {
+func (m *Mock)Create(grp,title,desc string) ([]byte, error) {
 
 	tckt := map[string]string{
 		"title":	title,
@@ -75,13 +74,13 @@ func (m *Mock)Create(grp,title,desc string) (nid.Nid, error) {
 		panic(fmt.Errorf("no ticket id %v",rmap))
 	}
 
-	return nid.NewString(m.tsys,id), nil
+	return []byte(id), nil
 }
 
-func (m *Mock)Update(nid nid.Nid, cmt string) error {
+func (m *Mock)Update(nid []byte, cmt string) error {
 
 	tmap := map[string]string{
-		"id": nid.Id(),
+		"id": string(nid),
 		"comment": cmt,
 	}
 	tjson, err := json.Marshal(tmap)
@@ -108,14 +107,14 @@ func (m *Mock)Update(nid nid.Nid, cmt string) error {
 	return nil
 }
 
-func (m *Mock)Close(nid nid.Nid, cmt string) error {
+func (m *Mock)Close(nid []byte, cmt string) error {
 
 	if len(cmt) > 0 {
 		m.Update(nid,cmt)
 	}
 
 	tmap := map[string]string{
-		"id":		nid.Id(),
+		"id":		string(nid),
 		"state":	"closed",
 	}
 	tjson, err := json.Marshal(tmap)

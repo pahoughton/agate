@@ -11,19 +11,18 @@ import (
 	gl "github.com/xanzy/go-gitlab"
 
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/notify/nid"
 )
 
 type Gitlab struct {
-	tsys	uint8
+	name	string
 	grp		string
 	debug	bool
 	c		*gl.Client
 }
 
-func New(cfg config.NSysGitlab, tsys int,dbg bool) *Gitlab {
+func New(cfg config.NSysGitlab,name string,dbg bool) *Gitlab {
 	g := &Gitlab{
-		tsys:	uint8(tsys),
+		name:	name,
 		grp:	cfg.Group,
 		debug:	dbg,
 		c:		gl.NewClient(nil, cfg.Token),
@@ -36,7 +35,7 @@ func (g *Gitlab)Group() string {
 	return g.grp
 }
 
-func (g *Gitlab)Create(prj, title, desc string, ) (nid.Nid, error) {
+func (g *Gitlab)Create(prj, title, desc string, ) ([]byte, error) {
 
 	i, resp, err := g.c.Issues.CreateIssue(prj,&gl.CreateIssueOptions{
 		Title: gl.String(title),
@@ -52,12 +51,12 @@ func (g *Gitlab)Create(prj, title, desc string, ) (nid.Nid, error) {
 	if g.debug {
 		fmt.Printf("gitlab.CreateIssue: ret issue: %v\n",i)
 	}
-	return nid.NewString(g.tsys,fmt.Sprintf("%s:%d",prj,i.IID)), nil
+	return []byte(fmt.Sprintf("%s:%d",prj,i.IID)), nil
 }
 
-func (g *Gitlab)Update(id nid.Nid, cmt string) error {
+func (g *Gitlab)Update(id []byte, cmt string) error {
 
-	nida := strings.Split(id.Id(),":")
+	nida := strings.Split(string(id),":")
 	prj := nida[0]
 	issue, err := strconv.Atoi(nida[1])
 	if err != nil {
@@ -65,7 +64,7 @@ func (g *Gitlab)Update(id nid.Nid, cmt string) error {
 	}
 	if g.debug {
 		fmt.Printf("gitlab.AddComment: nid '%s' nida '%v' nida0 '%s' nida1 '%s' prj '%s' issue '%d'\n",
-			id.Id(),
+			string(id),
 			nida,
 			nida[0],
 			nida[1],
@@ -89,13 +88,13 @@ func (g *Gitlab)Update(id nid.Nid, cmt string) error {
 	return nil
 }
 
-func (g *Gitlab)Close(id nid.Nid, cmt string) error {
+func (g *Gitlab)Close(id []byte, cmt string) error {
 
 	if len(cmt) > 0 {
 		g.Update(id,cmt)
 	}
 
-	nida := strings.Split(id.Id(),":")
+	nida := strings.Split(string(id),":")
 	prj := nida[0]
 	issue, err := strconv.Atoi(nida[1])
 	if err != nil {

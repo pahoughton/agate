@@ -7,87 +7,66 @@ import (
 	"fmt"
 
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/notify/nid"
 	"github.com/pahoughton/agate/notify/mock"
 	"github.com/pahoughton/agate/notify/gitlab"
 	"github.com/pahoughton/agate/notify/hpsm"
 
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
+
+	"github.com/boltdb/bolt"
 )
 
-/* pah */
-type Key []byte
+
+type Key struct {
+	Sys		string
+	Grp		string
+	Key		[]byte
+}
+
 func (n *Notify) UpdateNote(k Key, text string) bool {
 	print("STUB")
 	return false
 }
 
 type System interface {
-	Create(goup, title, desc string) (nid.Nid, error)
-	Update(nid nid.Nid, desc string) error
-	Close(nid nid.Nid, desc string) error
+	Create(goup, title, desc string) ([]byte, error)
+	Update(nid []byte, desc string) error
+	Close(nid []byte, desc string) error
 	Group() string
 }
 
-type NSys int
 const (
-	NSysMock	NSys = iota
-	NSysGitlab
-	NSysHpsm
-	NSysUnknown
-)
-
-type NSysMap map[string]NSys
-var (
-	nsysnames = []string{"mock","gitlab","hpsm","unknown"}
-	nsysmap = NSysMap{
-		"mock":		NSysMock,
-		"gitlab":	NSysGitlab,
-		"hpsm":		NSysHpsm,
-		"unknown":	NSysUnknown,
-	}
+	NSysMock	= "mock"
+	NSysGitlab	= "gitlab"
+	NSysHpsm	= "hpsm"
 )
 
 type metrics struct {
 	notes		*promp.CounterVec
 	errors		promp.Counter
+	qlen		*promp.GaugeVec
 }
 
 type Notify struct {
-	DefSys			NSys
+	DefSys			string
 	CloseResolved	bool
 	metrics			metrics
-	systems			[]System
+	systems			map[string]System
+	queue			map[string]chan []byte
+	qdepth			uint
+	db				*bolt.DB
 	debug			bool
 }
 
-func NewNSys(s string) NSys {
-	if v, ok := nsysmap[s]; ok {
-		return v
-	} else {
-		return NSysUnknown
-	}
-}
-
-func (t NSys) Int() int {
-	return int(t)
-}
-
-func (t NSys) String() string {
-	if NSysMock <= t && t <= NSysUnknown {
-		return nsysnames[t]
-	} else {
-		return "invalid"
-	}
-}
-
-func New(cfg config.Notify, dbg bool) *Notify {
+func New(cfg config.Notify, db *bolt.DB, dbg bool) *Notify {
 
 	n := &Notify{
 		debug:			dbg,
-		DefSys:			NewNSys(cfg.Default),
+		DefSys:			cfg.Default,
 		CloseResolved:	cfg.Resolved,
+		db:				db,
+		qdepth:			cfg.NQDepth,
 		metrics:		metrics{
 			notes:	proma.NewCounterVec(
 				promp.CounterOpts{
@@ -106,14 +85,21 @@ func New(cfg config.Notify, dbg bool) *Notify {
 					Name:		"errors",
 					Help:		"number of ticket errors",
 				}),
+			qlen:	proma.NewGaugeVec(
+				promp.GaugeOpts{
+					Namespace:	"agate",
+					Subsystem:	"notify",
+					Name:		"qlen",
+					Help:		"notify queue len",
+				},[]string{"sys","grp"}),
 		},
 	}
-	n.systems = make([]System,len(nsysmap))
-	n.systems[NSysMock]	= mock.New(cfg.Sys.Mock,NSysMock.Int(),dbg)
-	n.systems[NSysGitlab] = gitlab.New(cfg.Sys.Gitlab,NSysGitlab.Int(),dbg)
-	n.systems[NSysHpsm]	= hpsm.New(cfg.Sys.Hpsm,NSysHpsm.Int(),dbg)
+	n.systems = make(map[string]System)
+	n.systems[NSysMock]	= mock.New(cfg.Sys.Mock,NSysMock,dbg)
+	n.systems[NSysGitlab] = gitlab.New(cfg.Sys.Gitlab,NSysGitlab,dbg)
+	n.systems[NSysHpsm]	= hpsm.New(cfg.Sys.Hpsm,NSysHpsm,dbg)
 
-	if NSysMock > n.DefSys || n.DefSys >= NSysUnknown {
+	if _, ok  := n.systems[n.DefSys]; ! ok {
 		n.unregister()
 		panic(fmt.Sprintf("invalid default ticket sys: %s",cfg.Default))
 	}
@@ -141,10 +127,18 @@ func (n *Notify) Errorf(format string, args ...interface{}) error {
 	return fmt.Errorf(format,args...)
 }
 
-func (n *Notify) System(nsys NSys) System {
-	if NSysMock <= nsys && nsys < NSysUnknown {
-		return n.systems[nsys]
+func (n *Notify) System(nsys string) System {
+	if s, ok := n.systems[nsys]; ok {
+		return s
 	} else {
 		return nil
+	}
+}
+
+func (n *Notify) Group(nsys string) string {
+	if n.System(nsys) != nil {
+		return n.System(nsys).Group()
+	} else {
+		return "invalid"
 	}
 }
