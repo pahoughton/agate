@@ -13,18 +13,80 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-func (n *Notify) Notify(sys, grp string, q chan []byte) {
+func (n *Notify) Notify(sys, grp string, q chan Note) {
 	for {
-		key := <- q
-		err := n.db.Update(func(tx *bolt.Tx) error {
-			if b := tx.Bucket(queueKey(sys,grp)); b != nil {
+		note := <- q
 
-				note := &Note{}
-				if nbuf := b.Get(key); nbuf != nil {
-					dec := gob.NewDecoder(bytes.NewBuffer(nbuf))
+		if n.InRetry(sys,grp,note) { // atomic
+			continue
+		}
+
+		cur := &dbnote{}
+
+		err := n.DB(sys,grp).View(func(tx *bolt.Tx) error {
+			if b := tx..Bucket(bucketName()); b == nil {
+				return errors.NewError("note bucket not init")
+			}
+
+			if nbuf := b.Get(key); nbuf != nil {
+				if err := gob.NewDecoder(bytes.NewBuffer(nbuf)).Decode(note); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		if n.Update(cur,note) {
+
+
+
+		err := n.DB(sys,grp).Update(func(tx *bolt.Tx) error {
+
+				n.Retry(sys,grp,note)
+			}
+
+			var buf bytes.Buffer
+			if err = gob.NewEncoder(&buf).Encode(cur); err != nil {
+				return err
+			}
+			return b.Put(key,buf.Bytes())
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+
+
+				} else {
+				}
+			} else {
+				if  n.Update(cur,note) {
+			}
+			return nil
+		})
+	}
+}
+
+
+			}
+
+				} else {
+				}
+
+
 					if err := dec.Decode(note); err != nil {
 						return err
 					} else {
+
+		})
+		if err != nil {
+			panic( err )
+		}
 						if err = n.notify(sys,grp,*note); err == nil {
 							var buf bytes.Buffer
 							err = gob.NewEncoder(&buf).Encode(note)
@@ -50,7 +112,8 @@ func (n *Notify) Notify(sys, grp string, q chan []byte) {
 	}
 }
 
-func (n *Notify) notify(sys, grp string, note Note) error {
+// MODIFY's note
+func (n *Notify) notify(sys, grp string, note *Note) error {
 	panic("FIXME STUB")
 	return nil
 }

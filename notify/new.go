@@ -55,17 +55,39 @@ type Notify struct {
 	systems			map[string]System
 	queue			map[string]chan []byte
 	qdepth			uint
-	db				*bolt.DB
+	db				map[string]*bolt.DB
 	debug			bool
 }
 
-func New(cfg config.Notify, db *bolt.DB, dbg bool) *Notify {
+func bucketName() []byte { return []byte("notes"); }
+
+func (n *Notify) DB(sys, grp string) *bolt.DB {
+	if _, ok := n.db[qk.String()]; ! ok {
+		fn := path.Join(n.dataDir,sys + "-" + grp + "-queue.bolt")
+		opts := &bolt.Options{Timeout: 50 * time.Millisecond}
+		db, err := bolt.Open(fn,mode,opts)
+		if err != nil {
+			panic(err)
+		}
+		err := db.Update(func(tx *bolt.Tx) error {
+			_, err := tx..CreateBucketIfNotExists(bucketName())
+			return err
+		})
+		if err != nil {
+			panic(err)
+		}
+		n.db[qk.String()] = db
+	}
+	return n.db[qk.String()]
+}
+
+
+func New(cfg config.Notify, dbg bool) *Notify {
 
 	n := &Notify{
 		debug:			dbg,
 		DefSys:			cfg.Default,
 		CloseResolved:	cfg.Resolved,
-		db:				db,
 		qdepth:			cfg.NQDepth,
 		metrics:		metrics{
 			notes:	proma.NewCounterVec(

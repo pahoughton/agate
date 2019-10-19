@@ -125,19 +125,18 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 			remed = append(remed,als)
 		}
 	}
-	// queue notify & remed
-	nkey := am.notify.Queue(
-		sys,grp,ag.Key(),
-		ag.Title(),
-		ag.Desc(),
-		ag.CommonLabels,
-		alerts,
-		len(remed),
-		resolve == "true")
 
-	for _, a := range remed {
-		am.remed.Queue(a,nkey,a["status"] == "resolved")
+	nkey := notify.Key{sys,grp,ag.Key()}
+	alerts := make([]notify.Alert,len(ag.Alerts))
+	note := &notify.Note{
+		Labels: ag.CommonLabels,
+		Alerts: alerts,
 	}
+
+	// queue notify & remed
+	am.notify.Queue(nkey,note,am.remed.Count(nkey,alerts))
+	am.remed.Queue(nkey,alerts)
+
 	// metrics
 	ml := promp.Labels{
 		"sys": notify.NSys(nsys.Sys).String(),
