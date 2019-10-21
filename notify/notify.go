@@ -2,17 +2,15 @@
 */
 package notify
 
+	/*
 import (
 	"errors"
 	"bytes"
 	"encoding/gob"
-	/*
 	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
-*/
 	"github.com/boltdb/bolt"
 )
-
 func (n *Notify) Notify(sys, grp string, q chan Note) {
 	for {
 		note := <- q

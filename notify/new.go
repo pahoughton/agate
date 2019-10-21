@@ -4,19 +4,53 @@
 package notify
 
 import (
+    "encoding/base64"
 	"fmt"
+	"sync"
 
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/notify/mock"
-	"github.com/pahoughton/agate/notify/gitlab"
+	"github.com/pahoughton/agate/notify/note"
+//	"github.com/pahoughton/agate/notify/mock"
+//	"github.com/pahoughton/agate/notify/gitlab"
 	"github.com/pahoughton/agate/notify/hpsm"
 
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/boltdb/bolt"
+	"github.com/xiaonanln/keylock"
 )
 
+const (
+	SysMock	= "mock"
+	SysGitlab	= "gitlab"
+	SysHpsm	= "hpsm"
+)
+
+
+type System interface {
+	Create(goup string, note note.Note, remcnt int) ([]byte, error)
+	Update(note note.Note, text string) (bool,error)
+	Close(note note.Note, text string) error
+	Group() string
+	Name() string
+}
+
+type metrics struct {
+	notes		*promp.CounterVec
+	errors		promp.Counter
+}
+
+type Notify struct {
+	DefSys			string
+	CloseResolved	bool
+	dataDir			string
+	db				*DB
+	sys				map[string]System
+	klock			keylock.KeyLock
+	retry			sync.Map
+	metrics			metrics
+	debug			bool
+}
 
 type Key struct {
 	Sys		string
@@ -24,71 +58,22 @@ type Key struct {
 	Key		[]byte
 }
 
-func (n *Notify) UpdateNote(k Key, text string) bool {
-	print("STUB")
-	return false
-}
-
-type System interface {
-	Create(goup, title, desc string) ([]byte, error)
-	Update(nid []byte, desc string) error
-	Close(nid []byte, desc string) error
-	Group() string
-}
-
-const (
-	NSysMock	= "mock"
-	NSysGitlab	= "gitlab"
-	NSysHpsm	= "hpsm"
-)
-
-type metrics struct {
-	notes		*promp.CounterVec
-	errors		promp.Counter
-	qlen		*promp.GaugeVec
-}
-
-type Notify struct {
-	DefSys			string
-	CloseResolved	bool
-	metrics			metrics
-	systems			map[string]System
-	queue			map[string]chan []byte
-	qdepth			uint
-	db				map[string]*bolt.DB
-	debug			bool
-}
-
 func bucketName() []byte { return []byte("notes"); }
 
-func (n *Notify) DB(sys, grp string) *bolt.DB {
-	if _, ok := n.db[qk.String()]; ! ok {
-		fn := path.Join(n.dataDir,sys + "-" + grp + "-queue.bolt")
-		opts := &bolt.Options{Timeout: 50 * time.Millisecond}
-		db, err := bolt.Open(fn,mode,opts)
-		if err != nil {
-			panic(err)
-		}
-		err := db.Update(func(tx *bolt.Tx) error {
-			_, err := tx..CreateBucketIfNotExists(bucketName())
-			return err
-		})
-		if err != nil {
-			panic(err)
-		}
-		n.db[qk.String()] = db
-	}
-	return n.db[qk.String()]
+func (self *Key) KString() string {
+	return base64.StdEncoding.EncodeToString(self.Key)
 }
 
 
-func New(cfg config.Notify, dbg bool) *Notify {
 
-	n := &Notify{
+func New(cfg config.Notify, dataDir string, dbg bool) *Notify {
+
+	self := &Notify{
 		debug:			dbg,
 		DefSys:			cfg.Default,
 		CloseResolved:	cfg.Resolved,
-		qdepth:			cfg.NQDepth,
+		dataDir:		dataDir,
+		db:				newDB(),
 		metrics:		metrics{
 			notes:	proma.NewCounterVec(
 				promp.CounterOpts{
@@ -107,26 +92,17 @@ func New(cfg config.Notify, dbg bool) *Notify {
 					Name:		"errors",
 					Help:		"number of ticket errors",
 				}),
-			qlen:	proma.NewGaugeVec(
-				promp.GaugeOpts{
-					Namespace:	"agate",
-					Subsystem:	"notify",
-					Name:		"qlen",
-					Help:		"notify queue len",
-				},[]string{"sys","grp"}),
 		},
 	}
-	n.systems = make(map[string]System)
-	n.systems[NSysMock]	= mock.New(cfg.Sys.Mock,NSysMock,dbg)
-	n.systems[NSysGitlab] = gitlab.New(cfg.Sys.Gitlab,NSysGitlab,dbg)
-	n.systems[NSysHpsm]	= hpsm.New(cfg.Sys.Hpsm,NSysHpsm,dbg)
+	self.sys = make(map[string]System,16)
+	self.sys[SysHpsm] = hpsm.New(SysHpsm, cfg.Sys.Hpsm,dbg)
 
-	if _, ok  := n.systems[n.DefSys]; ! ok {
-		n.unregister()
+	if _, ok  := self.sys[self.DefSys]; ! ok {
+		self.unregister()
 		panic(fmt.Sprintf("invalid default ticket sys: %s",cfg.Default))
 	}
 
-	return n
+	return self
 }
 
 func (n *Notify) Del() {
@@ -149,8 +125,8 @@ func (n *Notify) Errorf(format string, args ...interface{}) error {
 	return fmt.Errorf(format,args...)
 }
 
-func (n *Notify) System(nsys string) System {
-	if s, ok := n.systems[nsys]; ok {
+func (n *Notify) Sys(sys string) System {
+	if s, ok := n.sys[sys]; ok {
 		return s
 	} else {
 		return nil
@@ -158,8 +134,8 @@ func (n *Notify) System(nsys string) System {
 }
 
 func (n *Notify) Group(nsys string) string {
-	if n.System(nsys) != nil {
-		return n.System(nsys).Group()
+	if n.Sys(nsys) != nil {
+		return n.Sys(nsys).Group()
 	} else {
 		return "invalid"
 	}

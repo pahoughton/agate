@@ -1,22 +1,21 @@
+package notify
 /* 2019-10-15 (cc) <paul4hough@gmail.com>
 
   send udpates to notify system
 store and q note for notify sys
 
 returns note key
-*/
-package notify
 import (
 	"bytes"
 	"encoding/gob"
-	"time"
 	pmod "github.com/prometheus/common/model"
 	promp "github.com/prometheus/client_golang/prometheus"
 	"github.com/boltdb/bolt"
 )
+*/
 
 /* we only care about the LAST update */
-type RetryQueue sync.Map[Key]Note
+// type RetryQueue sync.Map[Key]Note
 
 /* logic
 db has nsys state + remed data
@@ -28,7 +27,6 @@ if ! pass, update retry
 
 
 done
-*/
 
 
 
@@ -39,3 +37,4 @@ func NewQKey(sys, grp string, nkey []byte) QKey { return append([]byte(QKey{sys 
 
 func (qk QKey) Bytes() { return []byte(qk); }
 func (qk QKey) String() { return string(qk); }
+*/

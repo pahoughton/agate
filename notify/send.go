@@ -23,95 +23,53 @@
 */
 package notify
 
-type Alert struct {
-	Name	string
-	Labels	pmod.LabelSet
-	Annots	pmod.LabelSet
-	Starts	time.Time
-	Genurl	string
-	Labsfp	pmod.Fingerprint
+import (
+	"github.com/pahoughton/agate/notify/note"
+)
+
+// used by remed - concept
+func (n *Notify) Update(key Key, text string) {
+
 }
 
-type Note struct {
-	Labels  pmod.Labels
-	Alerts  []Alert
-	From	string
-	Updates string
-}
 
-func (n *Notify) UpdateNote(key Key, text string) {
-	// possible close b4 update - create w/ update only
-	n.Send(key,Note{Updates: text})
-}
+func (self *Notify) Send(key Key, note note.Note, remedCnt int) {
 
-func (n *Notify) Send(key Key, note Note) {
+	self.klock.Lock(key.KString())
+	defer self.klock.Unlock(key.KString())
 
-	n.Lock(key)
-	defer n.UnLock(key)
-
-	if r, ok := n.retry.Load(key); ok {
-		n.retry.Store(key,note)
+	if _, ok := self.retry.Load(key); ok {
+		self.retry.Store(key,note)
 		return
 	}
-
-	rec := &Note
-
-	err := n.DB(sys,grp).View(func(tx *bolt.Tx) error {
-		if b := tx..Bucket(bucketName()); b == nil {
-			panic( errors.NewError("note bucket not init") )
-		}
-
-		if nbuf := b.Get(key); nbuf != nil {
-			if err := gob.NewDecoder(bytes.NewBuffer(nbuf)).Decode(rec); err != nil {
-				panic( err )
-			}
-		}
-		return nil
-	})
-	if err != nil { panic(err) }
-
-
-	if nrec.nid == nil {
-		nrec.nid, err = n.System(key.System).Create(note,remedCnt > 0)
+	var err error
+	rec := self.dbGet(key)
+	// process
+	if rec.Nid == nil {
+		note.Nid, err = self.Sys(key.Sys).Create(key.Grp,note,remedCnt)
 	} else {
-		text := note.Changes(nrec.Alerts)
+		note.Nid = rec.Nid
+		text := note.Changes(rec.Alerts)
 		if len(note.Alerts) == 0 {
-			err = n.System(key.System).Close(nrec.nid,text)
-			nrec = nil
+			err = self.Sys(key.Sys).Close(note,text)
+			note.Nid = nil
 		} else {
-			closed, err := n.System(key.System).Update(nrec.nid,text)
+			var closed bool
+			closed, err = self.Sys(key.Sys).Update(note,text)
 			if closed {
-				// cleanup
-				err := n.db.Update(func(tx *bolt.Tx) error {
-					if b := tx..Bucket(bucketName()); b == nil {
-						panic( errors.NewError("note bucket not init") )
-					}
-					return b.Delete(key)
-				})
-				if err != nil { panic(err) }
-				nrec.nid, err = n.System(key.System).Create(note,remedCnt > 0)
+				self.dbDelete(key)
+				note.Nid, err = self.Sys(key.Sys).Create(key.Grp,note,remedCnt)
 			}
 		}
 	}
+
 	if err != nil {
-		n.retry.Store(key,note)
+		self.retry.Store(key,note)
 	} else {
-		err := n.db.Update(func(tx *bolt.Tx) error {
-			if b := tx..Bucket(bucketName()); b == nil {
-				panic( errors.NewError("note bucket not init") )
-			}
-			if nrec == nil {
-				return b.Delete(key)
-			} else {
-				var nbuf bytes.Buffer
-				if err = gob.NewEncoder(&nbuf).Encode(nrec); err != nil {
-					panic( err )
-				} else {
-					return b.Put(key,nbuf.Bytes())
-				}
-			}
-			return nil
-		})
-		if err != nil { panic(err) }
+		if note.Nid != nil {
+			self.dbUpdate(key,note)
+		} else {
+			self.dbDelete(key)
+		}
 	}
 }
