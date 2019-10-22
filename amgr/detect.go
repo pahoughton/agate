@@ -10,22 +10,27 @@ import (
 	"io/ioutil"
 	"net/http"
 	promp "github.com/prometheus/client_golang/prometheus"
+	pmod "github.com/prometheus/common/model"
 	"github.com/pahoughton/agate/amgr/alert"
 	"github.com/pahoughton/agate/notify"
+	"github.com/pahoughton/agate/notify/note"
 )
 const (
+	TIMEFMT = "2006-01-02 15:04:05.9999 -0700"
 	LBL_NSYS = "notify_sys"
 	LBL_NGRP = "notify_grp"
 
 	Url = "/api/v4/alerts"
 )
 
-func (am *Amgr)detectNSysGrp(pnsys, pgrp string, ag alert.AlertGroup ) (sys, grp string) {
+func (am *Amgr)detectNSysGrp(pnsys, pgrp string, ag alert.AlertGroup ) notify.Key {
+
+	key := notify.Key{}
 
 	if len(pnsys) > 0 {
-		sys = pnsys
+		key.Sys = pnsys
 	} else if v, ok := ag.CommonLabels[LBL_NSYS]; ok {
-		sys = string(v)
+		key.Sys = string(v)
 	} else {
 		cntmap := make(map[string]int,len(ag.Alerts))
 		for _, a := range ag.Alerts {
@@ -33,27 +38,25 @@ func (am *Amgr)detectNSysGrp(pnsys, pgrp string, ag alert.AlertGroup ) (sys, grp
 				cntmap[v] += 1
 			}
 		}
-		sys = am.notify.DefSys()
+		key.Sys = am.notify.DefSys
 		max := 0
 		for k, c := range cntmap {
 			if c > max {
-				sys = k
+				key.Sys = k
 				max = c
 			}
 		}
 	}
-	if ! notify.ValidSys(sys) {
+	if ! am.notify.ValidSys(key.Sys) {
 		fmt.Printf("WARN reseting invalid nsys %s\n%v\n",pnsys,ag)
-		am.metrics.errors.nsys.With(promp.Labels{
-			"sys": sys,
-		}).Inc()
-		sys = am.notify.DefSys()
+		am.metrics.errors.Inc()
+		key.Sys = am.notify.DefSys
 	}
 
 	if len(pgrp) > 0 {
-		grp = pgrp
+		key.Grp = pgrp
 	} else if v, ok := ag.CommonLabels[LBL_NGRP]; ok {
-		grp = string(v)
+		key.Grp = string(v)
 	} else {
 		cntmap := make(map[string]int,len(ag.Alerts))
 		for _, a := range ag.Alerts {
@@ -61,16 +64,16 @@ func (am *Amgr)detectNSysGrp(pnsys, pgrp string, ag alert.AlertGroup ) (sys, grp
 				cntmap[v] += 1
 			}
 		}
-		grp = am.notify.Group(sys)
+		key.Grp = am.notify.Group(key.Sys)
 		max := 0
 		for k, c := range cntmap {
 			if c > max {
-				grp = k
+				key.Grp = k
 				max = c
 			}
 		}
 	}
-	return sys, grp
+	return key
 }
 
 
@@ -109,38 +112,46 @@ func (am *Amgr)ServeHTTP(w http.ResponseWriter,r *http.Request) {
 	}
 
 	// convert
-	nsys, ngrp = am.detectNSysGrp(pnsys,pgrp,ag)
-
-	alerts := make([]pmod.LabelSet,len(ag.Alerts))
-	remed :=  make([]pmod.LabelSet,len(ag.Alerts))
+	alerts := make([]note.Alert,len(ag.Alerts))
+	remed :=  make([]note.Alert,len(ag.Alerts))
 	for _, a := range ag.Alerts {
-		als := a.Labels
-		als["status"] = a.Status
-		als["starts_at"] = a.StartsAt
-		if len(a.EndsAt) > 0 {
-			als["ends_at"] = a.EndsAt
+
+		if a.Status == "resolved" {
+			continue
 		}
-		alerts = append(alerts,als)
-		if am.remed.HasRemed(als) {
-			remed = append(remed,als)
+
+		na := note.Alert{}
+		na.Name   = a.Labels["alertname"]
+		na.Starts = a.StartsAt
+		na.From = a.GeneratorURL
+		na.Labels = make(pmod.LabelSet,len(a.Labels))
+		for k, v := range a.Labels { na.Labels[pmod.LabelName(k)] = pmod.LabelValue(v) }
+		na.Labsfp = na.Labels.Fingerprint()
+		alerts = append(alerts,na)
+
+		if am.remed.HasRemed(na) {
+			remed = append(remed,na)
 		}
 	}
 
-	nkey := notify.Key{sys,grp,ag.Key()}
-	alerts := make([]notify.Alert,len(ag.Alerts))
-	note := &notify.Note{
-		Labels: ag.CommonLabels,
+	note := note.Note{
+		Labels: make(pmod.LabelSet,len(ag.CommonLabels)),
 		Alerts: alerts,
+		From: ag.ExternalURL,
 	}
+	for k, v := range ag.CommonLabels { note.Labels[pmod.LabelName(k)] = pmod.LabelValue(v) }
 
-	// queue notify & remed
-	am.notify.Queue(nkey,note,am.remed.Count(nkey,alerts))
-	am.remed.Queue(nkey,alerts)
+	nkey := am.detectNSysGrp(pnsys,pgrp,ag)
+
+	// queue notify & remed - FIXME REMEDCNT
+	am.notify.Send(nkey,note,0)
+	// FIXME - no remed yet
+	// am.remed.Queue(nkey,alerts)
 
 	// metrics
 	ml := promp.Labels{
-		"sys": notify.NSys(nsys.Sys).String(),
-		"grp": nsys.Grp,
+		"sys": nkey.Sys,
+		"grp": nkey.Grp,
 		"resolve":resolve,
 	}
 	am.metrics.groups.With(ml).Inc()

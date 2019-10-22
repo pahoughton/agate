@@ -8,14 +8,15 @@ import (
 	"encoding/binary"
 	pmod "github.com/prometheus/common/model"
 	"github.com/boltdb/bolt"
+	"github.com/pahoughton/agate/notify"
 )
 
 
 // todo - what if never receive resolve?
 // remediated & unresolved metric
-func (r *Remed) Queue(labels pmod.LabelSet, nkey []byte, resolved bool) {
+func (r *Remed) Queue(labels pmod.LabelSet, key notify.Key, resolved bool) {
 
-	if task, ok := labels[taskName]; ! ok  || ! r.HasRemed(string(task)) {
+	if task, ok := labels[taskName]; ! ok  || ! r.TaskHasRemed(string(task)) {
 		return
 	}
 
@@ -38,7 +39,7 @@ func (r *Remed) Queue(labels pmod.LabelSet, nkey []byte, resolved bool) {
 				// new unresolved
 				if err := b.Put(bkey[:kl],[]byte("rem")); err == nil {
 					r.metrics.unres.Inc()
-					r.Remed(string(labels[pmod.LabelName(taskName)]),labels,nkey)
+					r.Remed(string(labels[pmod.LabelName(taskName)]),labels,key)
 					return nil
 				} else {
 					return err

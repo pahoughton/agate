@@ -45,9 +45,8 @@ func (self *Notify) DB(sys, grp string) *bolt.DB {
 			_, err := tx.CreateBucketIfNotExists(bucketName())
 			return err
 		})
-		if err != nil {
-			panic(err)
-		}
+		if err != nil { panic(err) }
+
 		return db
 	} else {
 		return db

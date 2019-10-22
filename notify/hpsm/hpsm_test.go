@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pahoughton/agate/config"
-	"github.com/pahoughton/agate/notify/nid"
 )
 
 func tcfg() config.NSysHpsm {

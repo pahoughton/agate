@@ -8,6 +8,7 @@ import (
 	"strings"
 	pmod "github.com/prometheus/common/model"
 	"github.com/pahoughton/agate/notify"
+	"github.com/pahoughton/agate/notify/note"
 
 )
 var (
@@ -66,17 +67,19 @@ func (r *Remed) remed(task string, labels pmod.LabelSet, nkey notify.Key) {
 		out = task + " no remed output"
 		r.errorf(out)
 	}
-	if r.notify.UpdateNote(nkey,out) == false {
-		r.errorf("remed notify(%s) update\n%v",nkey,out)
-	}
+
+	r.notify.Update(nkey,out)
 }
 
-func (r *Remed) HasRemed(task string) bool {
-	return r.ScriptAvail(task) || r.AnsibleAvail(task)
+func (r *Remed) HasRemed(alert note.Alert) bool {
+	return r.TaskHasRemed(alert.Name)
+}
+func (self *Remed) TaskHasRemed(task string) bool {
+	return self.ScriptAvail(task) || self.AnsibleAvail(task)
 }
 
 func (r *Remed) Remed(task string, labels pmod.LabelSet, nkey notify.Key) {
-	if r.HasRemed(task) {
+	if r.TaskHasRemed(task) {
 		atomic.AddInt32(&r.cnt,1)
 		if r.cnt >= r.parallel {
 			r.wg.Wait()

@@ -1,35 +1,26 @@
 /* 2019-10-19 (cc) <paul4hough@gmail.com>
    send note to notify system
-
-   lock note key
-   defer unlock
-
-   is retry?
-      update retry
-      return
-
-   read db
-   is new ?
-      create
-   else
-     is close ?
-       close
-     else
-       update
-  error?
-    put in retry
-  else
-    update db
 */
 package notify
 
 import (
+	"fmt"
 	"github.com/pahoughton/agate/notify/note"
 )
 
-// used by remed - concept
-func (n *Notify) Update(key Key, text string) {
+func (self *Notify) Update(key Key, text string) {
+	self.klock.Lock(key.KString())
+	defer self.klock.Unlock(key.KString())
 
+	note := self.dbGet(key)
+	if note.Nid != nil {
+		_, err := self.Sys(key.Sys).Update(note,text)
+		if err != nil {
+			fmt.Printf("WARN note update fail: %v for \n%s\n%s",err,note.String(),text)
+		}
+	} else {
+		fmt.Printf("WARN note update not found %s",text)
+	}
 }
 
 
@@ -53,7 +44,7 @@ func (self *Notify) Send(key Key, note note.Note, remedCnt int) {
 		if len(note.Alerts) == 0 {
 			err = self.Sys(key.Sys).Close(note,text)
 			note.Nid = nil
-		} else {
+		} else if len(text) > 0 {
 			var closed bool
 			closed, err = self.Sys(key.Sys).Update(note,text)
 			if closed {

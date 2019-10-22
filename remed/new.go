@@ -40,14 +40,14 @@ type Remed struct {
 	notify			*notify.Notify
 }
 
-func New(c config.Remed, n *notify.Notify, db *bolt.DB, dbg bool) *Remed {
+func New(c config.Remed, dataDir string, n *notify.Notify, dbg bool) *Remed {
 	r := &Remed{
 		debug:			dbg,
 		playbookDir:	c.PlaybookDir,
 		scriptsDir:		c.ScriptsDir,
 		parallel:		int32(c.Parallel),
 		notify:			n,
-		db:				db,
+		db:				nil, // FIXME no database
 		metrics:		Metrics{
 			ansible: proma.NewCounterVec(
 				promp.CounterOpts{
@@ -101,7 +101,7 @@ func New(c config.Remed, n *notify.Notify, db *bolt.DB, dbg bool) *Remed {
 	}
 	r.metrics.remedm.Set(float64(r.parallel))
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := r.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		return err
 	})

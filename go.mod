@@ -9,6 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/stretchr/testify v1.3.0
 	github.com/xanzy/go-gitlab v0.14.0
+	github.com/xiaonanln/keylock v0.0.0-20170708032727-d8acd162c477
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.2.2
 )

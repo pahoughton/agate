@@ -10,8 +10,6 @@ import (
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
 	promp "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/boltdb/bolt"
-
 	"github.com/pahoughton/agate/config"
  	"github.com/pahoughton/agate/notify"
 	"github.com/pahoughton/agate/remed"
@@ -26,26 +24,20 @@ type Metrics struct {
 
 type Amgr struct {
 	debug	bool
-	db		*bolt.DB
 	notify	*notify.Notify
 	remed	*remed.Remed
 	retry	time.Duration
 	metrics	Metrics
 }
 
-func New(c *config.Config,db *bolt.DB,dbg bool) *Amgr {
+func New(c *config.Config,dataDir string,dbg bool) *Amgr {
 
-
-	if err != nil {
-		panic(err)
-	}
-	n := notify.New(c.Notify,dbg)
+	notify := notify.New(c.Notify,dataDir,dbg)
 	am := &Amgr{
 		debug:		dbg,
 		retry:		c.Global.Retry,
-		db:			db,
-		notify:		n,
-		remed:		remed.New(c.Remed,n,dbg),
+		notify:		notify,
+		remed:		remed.New(c.Remed,dataDir,notify,dbg),
 		metrics: Metrics{
 			groups: proma.NewCounterVec(
 				promp.CounterOpts{
@@ -87,7 +79,6 @@ func New(c *config.Config,db *bolt.DB,dbg bool) *Amgr {
 func (am *Amgr) Del() {
 	am.notify.Del()
 	am.remed.Del()
-	am.db.Del()
 	am.unregister()
 }
 

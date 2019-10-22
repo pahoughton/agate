@@ -91,7 +91,6 @@ func main() {
 
 
 	fmt.Println("listening on ",*args.Listen)
-	am.Manage()
 
 	http.Handle("/metrics",promh.Handler())
 	http.Handle(amgr.Url,am)

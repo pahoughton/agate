@@ -10,8 +10,8 @@ import (
 
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/notify/note"
-//	"github.com/pahoughton/agate/notify/mock"
-//	"github.com/pahoughton/agate/notify/gitlab"
+	"github.com/pahoughton/agate/notify/mock"
+	"github.com/pahoughton/agate/notify/gitlab"
 	"github.com/pahoughton/agate/notify/hpsm"
 
 	proma "github.com/prometheus/client_golang/prometheus/promauto"
@@ -20,15 +20,21 @@ import (
 	"github.com/xiaonanln/keylock"
 )
 
+type Key struct {
+	Sys		string
+	Grp		string
+	Key		[]byte
+}
+
+// if change update ValidSys() - todo sys hard code
 const (
-	SysMock	= "mock"
+	SysMock		= "mock"
 	SysGitlab	= "gitlab"
-	SysHpsm	= "hpsm"
+	SysHpsm		= "hpsm"
 )
 
-
 type System interface {
-	Create(goup string, note note.Note, remcnt int) ([]byte, error)
+	Create(group string, note note.Note, remcnt int) ([]byte, error)
 	Update(note note.Note, text string) (bool,error)
 	Close(note note.Note, text string) error
 	Group() string
@@ -52,19 +58,11 @@ type Notify struct {
 	debug			bool
 }
 
-type Key struct {
-	Sys		string
-	Grp		string
-	Key		[]byte
-}
-
 func bucketName() []byte { return []byte("notes"); }
 
 func (self *Key) KString() string {
 	return base64.StdEncoding.EncodeToString(self.Key)
 }
-
-
 
 func New(cfg config.Notify, dataDir string, dbg bool) *Notify {
 
@@ -95,6 +93,8 @@ func New(cfg config.Notify, dataDir string, dbg bool) *Notify {
 		},
 	}
 	self.sys = make(map[string]System,16)
+	self.sys[SysMock] = mock.New(SysMock, cfg.Sys.Mock,dbg)
+	self.sys[SysGitlab] = gitlab.New(SysGitlab, cfg.Sys.Gitlab,dbg)
 	self.sys[SysHpsm] = hpsm.New(SysHpsm, cfg.Sys.Hpsm,dbg)
 
 	if _, ok  := self.sys[self.DefSys]; ! ok {
@@ -125,9 +125,22 @@ func (n *Notify) Errorf(format string, args ...interface{}) error {
 	return fmt.Errorf(format,args...)
 }
 
-func (n *Notify) Sys(sys string) System {
-	if s, ok := n.sys[sys]; ok {
-		return s
+func (self *Notify) ValidSys(sys string) bool {
+	if len(self.sys) > 0 {
+		_, ok := self.sys[sys]
+		return ok
+	} else {
+		// todo sys hard code
+		for _, s := range []string{SysMock,SysGitlab,SysHpsm} {
+			if sys == s { return true }
+		}
+		return false
+	}
+}
+
+func (self *Notify) Sys(sys string) System {
+	if self.ValidSys(sys) {
+		return self.sys[sys]
 	} else {
 		return nil
 	}
