@@ -53,28 +53,6 @@ func (self *Notify) DB(sys, grp string) *bolt.DB {
 	}
 }
 
-func (self *Notify) dbGet(key Key) (note.Note) {
-	// get
-	rec := note.Note{}
-
-	err := self.DB(key.Sys,key.Grp).View(func(tx *bolt.Tx) error {
-		if b := tx.Bucket(bucketName()); b == nil {
-			panic( errors.New("note bucket not init") )
-		} else {
-
-			if nbuf := b.Get(key.Key); nbuf != nil {
-				err := gob.NewDecoder(bytes.NewBuffer(nbuf)).Decode(rec)
-				if err != nil {
-					panic( err )
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil { panic(err) }
-	return rec
-}
-
 func (self *Notify) dbUpdate(key Key, note note.Note) {
 
 	err := self.DB(key.Sys,key.Grp).Update(func(tx *bolt.Tx) error {
@@ -91,6 +69,28 @@ func (self *Notify) dbUpdate(key Key, note note.Note) {
 		return nil
 	})
 	if err != nil { panic(err) }
+}
+
+func (self *Notify) dbGet(key Key) (note.Note) {
+	// get
+	rec := note.Note{}
+
+	err := self.DB(key.Sys,key.Grp).View(func(tx *bolt.Tx) error {
+		if b := tx.Bucket(bucketName()); b == nil {
+			panic( errors.New("note bucket not init") )
+		} else {
+
+			if nbuf := b.Get(key.Key); nbuf != nil {
+				err := gob.NewDecoder(bytes.NewBuffer(nbuf)).Decode(&rec)
+				if err != nil {
+					panic( err )
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil { panic(err) }
+	return rec
 }
 
 func (self *Notify) dbDelete(key Key) {

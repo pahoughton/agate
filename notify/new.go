@@ -7,6 +7,7 @@ import (
     "encoding/base64"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pahoughton/agate/config"
 	"github.com/pahoughton/agate/notify/note"
@@ -46,14 +47,20 @@ type metrics struct {
 	errors		promp.Counter
 }
 
+type retry struct {
+	key Key
+	note note.Note
+	rcnt int
+}
 type Notify struct {
 	DefSys			string
 	CloseResolved	bool
+	RetryDelay		time.Duration
 	dataDir			string
 	db				*DB
 	sys				map[string]System
-	klock			keylock.KeyLock
-	retry			sync.Map
+	klock			*keylock.KeyLock
+	retryMap		sync.Map
 	metrics			metrics
 	debug			bool
 }
@@ -70,8 +77,11 @@ func New(cfg config.Notify, dataDir string, dbg bool) *Notify {
 		debug:			dbg,
 		DefSys:			cfg.Default,
 		CloseResolved:	cfg.Resolved,
+		RetryDelay:		cfg.Retry,
 		dataDir:		dataDir,
 		db:				newDB(),
+		sys:			make(map[string]System,16),
+		klock:			keylock.NewKeyLock(),
 		metrics:		metrics{
 			notes:	proma.NewCounterVec(
 				promp.CounterOpts{
@@ -92,7 +102,6 @@ func New(cfg config.Notify, dataDir string, dbg bool) *Notify {
 				}),
 		},
 	}
-	self.sys = make(map[string]System,16)
 	self.sys[SysMock] = mock.New(SysMock, cfg.Sys.Mock,dbg)
 	self.sys[SysGitlab] = gitlab.New(SysGitlab, cfg.Sys.Gitlab,dbg)
 	self.sys[SysHpsm] = hpsm.New(SysHpsm, cfg.Sys.Hpsm,dbg)
@@ -105,8 +114,11 @@ func New(cfg config.Notify, dataDir string, dbg bool) *Notify {
 	return self
 }
 
-func (n *Notify) Del() {
-	n.unregister()
+func (self *Notify) Del() {
+	self.unregister()
+	for _, v := range self.db.dbmap {
+		v.Close()
+	}
 }
 func (n *Notify) unregister() {
 	if n != nil &&  n.metrics.errors != nil {
@@ -150,6 +162,6 @@ func (n *Notify) Group(nsys string) string {
 	if n.Sys(nsys) != nil {
 		return n.Sys(nsys).Group()
 	} else {
-		return "invalid"
+		return ""
 	}
 }

@@ -26,13 +26,22 @@ func (self *Notify) Update(key Key, text string) {
 
 func (self *Notify) Send(key Key, note note.Note, remedCnt int) {
 
-	self.klock.Lock(key.KString())
-	defer self.klock.Unlock(key.KString())
+	kstr := key.KString()
 
-	if _, ok := self.retry.Load(key); ok {
-		self.retry.Store(key,note)
+	self.klock.Lock(kstr)
+	defer self.klock.Unlock(kstr)
+
+	if _, ok := self.retryMap.Load(kstr); ok {
+		// replace
+		self.retryMap.Store(kstr,retry{key,note,remedCnt})
 		return
 	}
+	// functionality shared w/ retry proc
+	self.notify(key,note,remedCnt)
+}
+
+func (self *Notify) notify(key Key, note note.Note, remedCnt int) {
+
 	var err error
 	rec := self.dbGet(key)
 	// process
@@ -53,9 +62,9 @@ func (self *Notify) Send(key Key, note note.Note, remedCnt int) {
 			}
 		}
 	}
-
 	if err != nil {
-		self.retry.Store(key,note)
+		self.retryMap.Store(key,note)
+		if self.debug { fmt.Printf("DEBUG retry key: %v\n",key)	}
 	} else {
 		if note.Nid != nil {
 			self.dbUpdate(key,note)
